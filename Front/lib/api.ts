@@ -6,6 +6,7 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 export interface Member {
   id: number;
   name: string;
+  email: string;
   password: string;
   zip: string;
   addr1: string;
@@ -14,10 +15,37 @@ export interface Member {
 
 export interface MemberCreate {
   name: string;
+  email: string;
   password: string;
   zip: string;
   addr1: string;
   addr2: string;
+}
+
+export interface LoginRequest {
+  email: string;
+  password: string;
+}
+
+export interface UserInfo {
+  id: number;
+  name: string;
+  email: string;
+  zip?: string;
+  addr1?: string;
+  addr2?: string;
+}
+
+export interface LoginResponse {
+  access_token: string;
+  token_type: string;
+  user_type: "admin" | "member";
+  user: UserInfo;
+}
+
+export interface MeResponse {
+  user_type: "admin" | "member";
+  user: UserInfo;
 }
 
 // Item (polymorphic: ITEM, BOOK, ALBUM, MOVIE)
@@ -122,7 +150,7 @@ export const memberApi = {
   },
 
   create: async (data: MemberCreate): Promise<Member> => {
-    const res = await fetch(`${API_BASE_URL}/member/create`, {
+    const res = await fetch(`${API_BASE_URL}/member/signup`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
@@ -130,6 +158,32 @@ export const memberApi = {
     if (!res.ok) {
       const error = await res.json().catch(() => ({}));
       throw new Error(error.detail || "Failed to create member");
+    }
+    return res.json();
+  },
+
+  login: async (data: LoginRequest): Promise<LoginResponse> => {
+    const res = await fetch(`${API_BASE_URL}/member/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) {
+      const error = await res.json().catch(() => ({}));
+      throw new Error(error.detail || "로그인에 실패했습니다.");
+    }
+    return res.json();
+  },
+
+  getMe: async (): Promise<MeResponse> => {
+    const token = localStorage.getItem("access_token");
+    const res = await fetch(`${API_BASE_URL}/member/me`, {
+      headers: {
+        "Authorization": `Bearer ${token}`,
+      },
+    });
+    if (!res.ok) {
+      throw new Error("인증이 만료되었습니다.");
     }
     return res.json();
   },

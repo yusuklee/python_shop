@@ -1,9 +1,11 @@
 "use client";
 
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { DashboardLayout } from "@/components/dashboard-layout";
 import { PageHeader } from "@/components/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, Package, FolderTree, ShoppingCart } from "lucide-react";
+import { Users, Package, FolderTree, TrendingUp, Activity } from "lucide-react";
 import Link from "next/link";
 
 const stats = [
@@ -12,36 +14,40 @@ const stats = [
     description: "회원 조회, 등록, 수정, 삭제",
     icon: Users,
     href: "/members",
-    color: "text-blue-600",
-    bgColor: "bg-blue-50",
+    gradient: "from-blue-500 to-blue-600",
+    lightBg: "bg-blue-500/10",
+    iconColor: "text-blue-500",
   },
   {
     name: "상품 관리",
     description: "도서, 앨범, 영화 상품 관리",
     icon: Package,
     href: "/items",
-    color: "text-green-600",
-    bgColor: "bg-green-50",
+    gradient: "from-emerald-500 to-emerald-600",
+    lightBg: "bg-emerald-500/10",
+    iconColor: "text-emerald-500",
   },
   {
     name: "카테고리 관리",
     description: "카테고리 생성 및 상품 연결",
     icon: FolderTree,
     href: "/categories",
-    color: "text-orange-600",
-    bgColor: "bg-orange-50",
-  },
-  {
-    name: "주문 관리",
-    description: "주문 생성 및 관리",
-    icon: ShoppingCart,
-    href: "/orders",
-    color: "text-purple-600",
-    bgColor: "bg-purple-50",
+    gradient: "from-orange-500 to-orange-600",
+    lightBg: "bg-orange-500/10",
+    iconColor: "text-orange-500",
   },
 ];
 
 export default function DashboardPage() {
+  const router = useRouter();
+
+  useEffect(() => {
+    const userType = localStorage.getItem("user_type");
+    if (userType === "member") {
+      router.replace("/orders");
+    }
+  }, [router]);
+
   return (
     <DashboardLayout>
       <PageHeader
@@ -49,16 +55,17 @@ export default function DashboardPage() {
         description="쇼핑몰 관리 시스템에 오신 것을 환영합니다"
       />
 
-      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
         {stats.map((stat) => (
           <Link key={stat.name} href={stat.href}>
-            <Card className="cursor-pointer transition-shadow hover:shadow-lg">
+            <Card className="cursor-pointer card-hover border-0 shadow-md overflow-hidden">
+              <div className={`h-1 bg-gradient-to-r ${stat.gradient}`} />
               <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">
+                <CardTitle className="text-base font-semibold text-foreground">
                   {stat.name}
                 </CardTitle>
-                <div className={`rounded-lg p-2 ${stat.bgColor}`}>
-                  <stat.icon className={`h-5 w-5 ${stat.color}`} />
+                <div className={`rounded-xl p-2.5 ${stat.lightBg}`}>
+                  <stat.icon className={`h-5 w-5 ${stat.iconColor}`} />
                 </div>
               </CardHeader>
               <CardContent>
@@ -69,35 +76,80 @@ export default function DashboardPage() {
         ))}
       </div>
 
-      <div className="mt-8">
-        <Card>
-          <CardHeader>
-            <CardTitle>시스템 안내</CardTitle>
+      <div className="mt-8 grid gap-6 lg:grid-cols-2">
+        <Card className="border-0 shadow-md">
+          <CardHeader className="flex flex-row items-center gap-2">
+            <Activity className="h-5 w-5 text-primary" />
+            <CardTitle>빠른 시작 가이드</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="rounded-lg bg-muted p-4">
-              <h3 className="font-semibold text-foreground">API 엔드포인트</h3>
-              <p className="mt-1 text-sm text-muted-foreground">
-                이 관리 시스템은 FastAPI 백엔드와 연동됩니다. 환경변수 NEXT_PUBLIC_API_URL을 설정하여 API 서버 주소를 지정할 수 있습니다.
+            <div className="rounded-xl bg-gradient-to-r from-primary/5 to-primary/10 p-4 border border-primary/10">
+              <h3 className="font-semibold text-foreground flex items-center gap-2">
+                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary text-xs text-primary-foreground">1</span>
+                회원 등록
+              </h3>
+              <p className="mt-2 text-sm text-muted-foreground ml-8">
+                회원 관리 메뉴에서 새로운 회원을 등록하세요.
               </p>
             </div>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="rounded-lg border border-border p-4">
-                <h4 className="font-medium text-foreground">회원 API</h4>
+            <div className="rounded-xl bg-gradient-to-r from-emerald-500/5 to-emerald-500/10 p-4 border border-emerald-500/10">
+              <h3 className="font-semibold text-foreground flex items-center gap-2">
+                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-500 text-xs text-white">2</span>
+                상품 추가
+              </h3>
+              <p className="mt-2 text-sm text-muted-foreground ml-8">
+                도서, 앨범, 영화 등 다양한 상품을 추가하세요.
+              </p>
+            </div>
+            <div className="rounded-xl bg-gradient-to-r from-orange-500/5 to-orange-500/10 p-4 border border-orange-500/10">
+              <h3 className="font-semibold text-foreground flex items-center gap-2">
+                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-orange-500 text-xs text-white">3</span>
+                카테고리 설정
+              </h3>
+              <p className="mt-2 text-sm text-muted-foreground ml-8">
+                상품을 카테고리로 분류하세요.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-0 shadow-md">
+          <CardHeader className="flex flex-row items-center gap-2">
+            <TrendingUp className="h-5 w-5 text-primary" />
+            <CardTitle>API 엔드포인트</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid gap-4">
+              <div className="rounded-xl border border-border p-4 hover:border-primary/30 transition-colors">
+                <h4 className="font-medium text-foreground flex items-center gap-2">
+                  <Users className="h-4 w-4 text-blue-500" />
+                  회원 API
+                </h4>
                 <ul className="mt-2 space-y-1 text-sm text-muted-foreground">
-                  <li>GET /member/show/all - 전체 회원 조회</li>
-                  <li>POST /member/create - 회원 생성</li>
-                  <li>PATCH /member/update/id - 회원 수정</li>
-                  <li>DELETE /member/delete/id - 회원 삭제</li>
+                  <li className="flex items-center gap-2">
+                    <code className="rounded bg-muted px-1.5 py-0.5 text-xs">GET</code>
+                    /member/show/all
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <code className="rounded bg-emerald-500/10 text-emerald-600 px-1.5 py-0.5 text-xs">POST</code>
+                    /member/signup
+                  </li>
                 </ul>
               </div>
-              <div className="rounded-lg border border-border p-4">
-                <h4 className="font-medium text-foreground">상품 API</h4>
+              <div className="rounded-xl border border-border p-4 hover:border-primary/30 transition-colors">
+                <h4 className="font-medium text-foreground flex items-center gap-2">
+                  <Package className="h-4 w-4 text-emerald-500" />
+                  상품 API
+                </h4>
                 <ul className="mt-2 space-y-1 text-sm text-muted-foreground">
-                  <li>GET /item/show/all - 전체 상품 조회</li>
-                  <li>POST /item/create/book,album,movie - 상품 생성</li>
-                  <li>PATCH /item/update/id - 상품 수정</li>
-                  <li>DELETE /item/delete/id - 상품 삭제</li>
+                  <li className="flex items-center gap-2">
+                    <code className="rounded bg-muted px-1.5 py-0.5 text-xs">GET</code>
+                    /item/show/all
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <code className="rounded bg-emerald-500/10 text-emerald-600 px-1.5 py-0.5 text-xs">POST</code>
+                    /item/create/book
+                  </li>
                 </ul>
               </div>
             </div>

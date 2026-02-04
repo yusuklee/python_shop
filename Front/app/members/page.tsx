@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import useSWR from "swr";
 import { DashboardLayout } from "@/components/dashboard-layout";
 import { PageHeader } from "@/components/page-header";
@@ -43,7 +44,15 @@ import { format } from "date-fns";
 const fetcher = () => memberApi.getAll();
 
 export default function MembersPage() {
+  const router = useRouter();
   const { data: members, error, isLoading, mutate } = useSWR("members", fetcher);
+
+  useEffect(() => {
+    const userType = localStorage.getItem("user_type");
+    if (userType === "member") {
+      router.replace("/orders");
+    }
+  }, [router]);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isDetailOpen, setIsDetailOpen] = useState(false); // New state for detail dialog
@@ -56,6 +65,7 @@ export default function MembersPage() {
 
   const [formData, setFormData] = useState<MemberCreate>({
     name: "",
+    email: "",
     password: "",
     zip: "",
     addr1: "",
@@ -63,17 +73,21 @@ export default function MembersPage() {
   });
 
   const resetForm = () => {
-    setFormData({ name: "", password: "", zip: "", addr1: "", addr2: "" });
+    setFormData({ name: "", email: "", password: "", zip: "", addr1: "", addr2: "" });
     setErrorMsg("");
   };
 
   const handleCreate = async () => {
-    if (!formData.name || !formData.password || !formData.zip || !formData.addr1 || !formData.addr2) {
+    if (!formData.name || !formData.email || !formData.password || !formData.zip || !formData.addr1 || !formData.addr2) {
       setErrorMsg("모든 필드를 입력해주세요.");
       return;
     }
     if (formData.name.length < 2 || formData.name.length > 20) {
       setErrorMsg("이름은 2-20자 사이여야 합니다.");
+      return;
+    }
+    if (formData.email.length < 5 || formData.email.length > 30) {
+      setErrorMsg("이메일은 5-30자 사이여야 합니다.");
       return;
     }
     if (formData.password.length < 5 || formData.password.length > 20) {
@@ -96,6 +110,7 @@ export default function MembersPage() {
     try {
       const updateData: Partial<MemberCreate> = {
         name: formData.name,
+        email: formData.email,
         zip: formData.zip,
         addr1: formData.addr1,
         addr2: formData.addr2,
@@ -126,6 +141,7 @@ export default function MembersPage() {
     setSelectedMember(member);
     setFormData({
       name: member.name,
+      email: member.email || "",
       password: "",
       zip: member.zip || "",
       addr1: member.addr1 || "",
@@ -184,15 +200,25 @@ export default function MembersPage() {
                   />
                 </div>
                 <div className="grid gap-2">
-                  <Label htmlFor="password">비밀번호 (5-20자) *</Label>
+                  <Label htmlFor="email">이메일 (5-30자) *</Label>
                   <Input
-                    id="password"
-                    type="password"
-                    value={formData.password}
-                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                    placeholder="비밀번호"
+                    id="email"
+                    type="email"
+                    value={formData.email}
+                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    placeholder="이메일"
                   />
                 </div>
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="password">비밀번호 (5-20자) *</Label>
+                <Input
+                  id="password"
+                  type="password"
+                  value={formData.password}
+                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                  placeholder="비밀번호"
+                />
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="zip">우편번호 *</Label>
@@ -248,6 +274,7 @@ export default function MembersPage() {
                 <TableRow>
                   <TableHead>ID</TableHead>
                   <TableHead>이름</TableHead>
+                  <TableHead>이메일</TableHead>
                   <TableHead>우편번호</TableHead>
                   <TableHead>주소</TableHead>
                   <TableHead>상세주소</TableHead>
@@ -259,6 +286,7 @@ export default function MembersPage() {
                   <TableRow key={member.id ?? `member-${index}`}>
                     <TableCell>{member.id}</TableCell>
                     <TableCell className="font-medium">{member.name}</TableCell>
+                    <TableCell>{member.email || "-"}</TableCell>
                     <TableCell>{member.zip || "-"}</TableCell>
                     <TableCell>{member.addr1 || "-"}</TableCell>
                     <TableCell>{member.addr2 || "-"}</TableCell>
@@ -331,6 +359,16 @@ export default function MembersPage() {
               />
             </div>
             <div className="grid gap-2">
+              <Label htmlFor="edit-email">이메일</Label>
+              <Input
+                id="edit-email"
+                type="email"
+                value={formData.email}
+                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                placeholder="이메일"
+              />
+            </div>
+            <div className="grid gap-2">
               <Label htmlFor="edit-password">비밀번호 (변경 시 입력)</Label>
               <Input
                 id="edit-password"
@@ -339,7 +377,6 @@ export default function MembersPage() {
                 onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                 placeholder="새 비밀번호"
               />
-            </div>
             </div>
             <div className="grid gap-2">
               <Label htmlFor="edit-zip">우편번호</Label>
@@ -368,6 +405,7 @@ export default function MembersPage() {
                 placeholder="상세 주소"
               />
             </div>
+          </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsEditOpen(false)}>
               취소
@@ -391,6 +429,8 @@ export default function MembersPage() {
                 <span>{selectedMemberForDetail.id}</span>
                 <span className="font-medium">이름:</span>
                 <span>{selectedMemberForDetail.name}</span>
+                <span className="font-medium">이메일:</span>
+                <span>{selectedMemberForDetail.email}</span>
                 <span className="font-medium">우편번호:</span>
                 <span>{selectedMemberForDetail.zip}</span>
                 <span className="font-medium">주소:</span>

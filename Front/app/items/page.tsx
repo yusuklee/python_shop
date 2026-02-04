@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import useSWR from "swr";
 import { DashboardLayout } from "@/components/dashboard-layout";
 import { PageHeader } from "@/components/page-header";
@@ -46,7 +47,15 @@ const fetcher = () => itemApi.getAll();
 type ItemType = "book" | "album" | "movie";
 
 export default function ItemsPage() {
+  const router = useRouter();
   const { data: items, error, isLoading, mutate } = useSWR("items", fetcher);
+
+  useEffect(() => {
+    const userType = localStorage.getItem("user_type");
+    if (userType === "member") {
+      router.replace("/orders");
+    }
+  }, [router]);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<Item | null>(null);

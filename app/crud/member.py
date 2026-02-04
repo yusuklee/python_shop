@@ -32,6 +32,8 @@ class MemberRepository:
                 updateMember.addr1 = update_content['addr1']
             if 'addr2' in update_content.keys():
                 updateMember.addr2 = update_content['addr2']
+            if 'email' in update_content.keys():
+                updateMember.email=update_content['email']
             db.commit()
             db.refresh(updateMember)
         return updateMember

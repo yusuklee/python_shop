@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import useSWR from "swr";
 import { DashboardLayout } from "@/components/dashboard-layout";
 import { PageHeader } from "@/components/page-header";
@@ -42,7 +43,15 @@ import { Plus, Link as LinkIcon, Trash2, FolderTree, Search } from "lucide-react
 const itemFetcher = () => itemApi.getAll();
 
 export default function CategoriesPage() {
+  const router = useRouter();
   const { data: items } = useSWR("items-for-category", itemFetcher);
+
+  useEffect(() => {
+    const userType = localStorage.getItem("user_type");
+    if (userType === "member") {
+      router.replace("/orders");
+    }
+  }, [router]);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
 
   const [categoryName, setCategoryName] = useState("");

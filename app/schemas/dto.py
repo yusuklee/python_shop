@@ -41,9 +41,27 @@ class MemberBaseModel(BaseModel):
     id: Optional[int] = None
     name: str = Field(..., min_length=2, max_length=20)
     password: str = Field(..., min_length=5, max_length=20)
+    email:str=Field(...,min_length=5, max_length=30)
     zip: str = Field(..., max_length=30)
     addr1: str = Field(..., max_length=30)
     addr2: str = Field(..., max_length=30)
+
+    class Config:
+        from_attributes = True
+
+
+class MemberLogin(BaseModel):
+    email:str=Field(...,min_length=5, max_length=30)
+    password:str=Field(...,min_length=3,max_length=30)
+
+
+# ============ Administrator Models ============
+
+class AdminBaseModel(BaseModel):
+    id: Optional[int] = None
+    name: str = Field(..., min_length=2, max_length=50)
+    email: str = Field(..., min_length=5, max_length=50)
+    password: str = Field(..., min_length=5, max_length=255)
 
     class Config:
         from_attributes = True

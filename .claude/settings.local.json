@@ -8,7 +8,12 @@
       "Bash(curl:*)",
       "Bash(timeout /t 3 /nobreak)",
       "Bash(ping:*)",
-      "Bash(echo:*)"
+      "Bash(echo:*)",
+      "Bash(powershell -Command \"cd ''C:\\\\Users\\\\USER\\\\Desktop\\\\Python_Shop\\\\app''; python -m db.init_db\")",
+      "Bash(powershell -Command \"Invoke-RestMethod -Uri ''http://localhost:8000/member/signup'' -Method Post -ContentType ''application/json'' -Body ''{\"\"name\"\":\"\"테스트\"\",\"\"email\"\":\"\"test@test.com\"\",\"\"password\"\":\"\"test123\"\",\"\"zip\"\":\"\"12345\"\",\"\"addr1\"\":\"\"서울시\"\",\"\"addr2\"\":\"\"강남구\"\"}''\")",
+      "Bash(powershell:*)",
+      "Bash(npm run dev)",
+      "Bash(taskkill:*)"
     ]
   }
 }

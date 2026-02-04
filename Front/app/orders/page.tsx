@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import useSWR from "swr";
 import { DashboardLayout } from "@/components/dashboard-layout";
 import { PageHeader } from "@/components/page-header";
@@ -23,17 +23,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { memberApi, itemApi, orderApi, type Member, type Item, type OrderItem, type OrderCreate } from "@/lib/api";
-import { Plus, Trash2, ShoppingCart } from "lucide-react";
+import { itemApi, orderApi, type Item, type OrderItem, type OrderCreate, type UserInfo } from "@/lib/api";
+import { Plus, Trash2, ShoppingCart, User } from "lucide-react";
 
-const memberFetcher = () => memberApi.getAll();
 const itemFetcher = () => itemApi.getAll();
 
 export default function OrdersPage() {
-  const { data: members } = useSWR("members-for-order", memberFetcher);
   const { data: items } = useSWR("items-for-order", itemFetcher);
 
-  const [selectedMemberId, setSelectedMemberId] = useState<string>("");
+  const [currentUser, setCurrentUser] = useState<UserInfo | null>(null);
   const [zip, setZip] = useState("");
   const [addr1, setAddr1] = useState("");
   const [addr2, setAddr2] = useState("");
@@ -44,6 +42,19 @@ export default function OrdersPage() {
   const [message, setMessage] = useState("");
   const [messageType, setMessageType] = useState<"success" | "error">("success");
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // 로그인한 회원 정보 로드
+  useEffect(() => {
+    const storedUserInfo = localStorage.getItem("user_info");
+    if (storedUserInfo) {
+      const userInfo: UserInfo = JSON.parse(storedUserInfo);
+      setCurrentUser(userInfo);
+      // 배송지 정보 자동 설정
+      setZip(userInfo.zip || "");
+      setAddr1(userInfo.addr1 || "");
+      setAddr2(userInfo.addr2 || "");
+    }
+  }, []);
 
   const showMessage = (msg: string, type: "success" | "error") => {
     setMessage(msg);
@@ -93,19 +104,9 @@ export default function OrdersPage() {
     }, 0);
   };
 
-  const handleSelectMember = (memberId: string) => {
-    setSelectedMemberId(memberId);
-    const member = members?.find((m) => m.id === Number(memberId));
-    if (member) {
-      setZip(member.zip || "");
-      setAddr1(member.addr1 || "");
-      setAddr2(member.addr2 || "");
-    }
-  };
-
   const handleCreateOrder = async () => {
-    if (!selectedMemberId || orderItems.length === 0) {
-      showMessage("회원과 상품을 선택해주세요.", "error");
+    if (!currentUser || orderItems.length === 0) {
+      showMessage("상품을 선택해주세요.", "error");
       return;
     }
 
@@ -122,13 +123,9 @@ export default function OrdersPage() {
         addr2,
         items: orderItems,
       };
-      await orderApi.create(Number(selectedMemberId), data);
+      await orderApi.create(currentUser.id, data);
       showMessage("주문이 성공적으로 생성되었습니다.", "success");
-      // Reset form
-      setSelectedMemberId("");
-      setZip("");
-      setAddr1("");
-      setAddr2("");
+      // Reset form - 배송지는 유지
       setOrderItems([]);
     } catch (e) {
       showMessage(e instanceof Error ? e.message : "주문 생성에 실패했습니다.", "error");
@@ -156,28 +153,30 @@ export default function OrdersPage() {
       <div className="grid gap-6 lg:grid-cols-2">
         {/* 주문 정보 입력 */}
         <div className="space-y-6">
-          {/* 회원 선택 */}
+          {/* 주문자 정보 */}
           <Card>
             <CardHeader>
-              <CardTitle>회원 선택</CardTitle>
-              <CardDescription>주문할 회원을 선택하세요</CardDescription>
+              <CardTitle className="flex items-center gap-2">
+                <User className="h-5 w-5" />
+                주문자 정보
+              </CardTitle>
+              <CardDescription>로그인한 회원 정보로 주문합니다</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid gap-2">
-                <Label>회원</Label>
-                <Select value={selectedMemberId} onValueChange={handleSelectMember}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="회원을 선택하세요" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {members?.map((member, index) => (
-                      <SelectItem key={member.id ?? `member-${index}`} value={String(member.id)}>
-                        {member.name} (ID: {member.id})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+            <CardContent>
+              {currentUser ? (
+                <div className="space-y-2">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">이름</span>
+                    <span className="font-medium">{currentUser.name}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">이메일</span>
+                    <span className="font-medium">{currentUser.email}</span>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-muted-foreground">로그인 정보를 불러오는 중...</p>
+              )}
             </CardContent>
           </Card>
 
@@ -343,7 +342,7 @@ export default function OrdersPage() {
                 className="mt-4 w-full"
                 size="lg"
                 onClick={handleCreateOrder}
-                disabled={isSubmitting || !selectedMemberId || orderItems.length === 0}
+                disabled={isSubmitting || !currentUser || orderItems.length === 0}
               >
                 {isSubmitting ? "주문 처리 중..." : "주문하기"}
               </Button>
