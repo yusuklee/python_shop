@@ -1,0 +1,6 @@
+import enum
+
+class DeliveryStatus(enum.Enum):
+    DELIVERY_READY = "DELIVERY_READY"
+    DELIVERY_COMPLETE = "DELIVERY_COMPLETE"
+    DELIVERY_CANCELED = "DELIVERY_CANCELED"

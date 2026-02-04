@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run build:*)",
+      "Bash(python:*)",
+      "Bash(uvicorn main:app:*)",
+      "Bash(pip install:*)",
+      "Bash(curl:*)",
+      "Bash(timeout /t 3 /nobreak)",
+      "Bash(ping:*)",
+      "Bash(echo:*)"
+    ]
+  }
+}
