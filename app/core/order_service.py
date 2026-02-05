@@ -43,6 +43,21 @@ class OrderService:
 
         return order
 
+    def cancel_order(self, order_id:int):
+        order = orderRepo.find_by_id(self.db, order_id)
+        for order_item in order.order_items:
+            item = order_item.item
+            count = order_item.count
+            item.stock+=count
+            # order.total_price-= item.price * count      지울건데 차피 필요없겟네
+
+        #cascade라 order지우면 orderitem도 날라갈듯?
+        orderRepo.delete(self.db, order_id)
+        return True
+
+
+
+
     def get_orders_by_member_id(self, member_id: int):
         return orderRepo.find_by_member_id(self.db, member_id)
 

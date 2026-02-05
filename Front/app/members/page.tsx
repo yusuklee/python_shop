@@ -38,7 +38,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { memberApi, orderApi, type Member, type MemberCreate, type Order } from "@/lib/api";
-import { Plus, Pencil, Trash2, Eye } from "lucide-react";
+import { Plus, Trash2, Eye } from "lucide-react";
 import { format } from "date-fns";
 
 const fetcher = () => memberApi.getAll();
@@ -54,10 +54,8 @@ export default function MembersPage() {
     }
   }, [router]);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
-  const [isEditOpen, setIsEditOpen] = useState(false);
-  const [isDetailOpen, setIsDetailOpen] = useState(false); // New state for detail dialog
-  const [selectedMember, setSelectedMember] = useState<Member | null>(null);
-  const [selectedMemberForDetail, setSelectedMemberForDetail] = useState<Member | null>(null); // New state for member detail
+  const [isDetailOpen, setIsDetailOpen] = useState(false);
+  const [selectedMemberForDetail, setSelectedMemberForDetail] = useState<Member | null>(null);
   const [memberOrders, setMemberOrders] = useState<Order[] | null>(null); // New state for member orders
   const [memberOrdersLoading, setMemberOrdersLoading] = useState(false); // New state for loading orders
   const [memberOrdersError, setMemberOrdersError] = useState<string | null>(null); // New state for orders error
@@ -105,29 +103,6 @@ export default function MembersPage() {
     }
   };
 
-  const handleUpdate = async () => {
-    if (!selectedMember?.id) return;
-    try {
-      const updateData: Partial<MemberCreate> = {
-        name: formData.name,
-        email: formData.email,
-        zip: formData.zip,
-        addr1: formData.addr1,
-        addr2: formData.addr2,
-      };
-      if (formData.password) {
-        updateData.password = formData.password;
-      }
-      await memberApi.update(selectedMember.id, updateData);
-      mutate();
-      setIsEditOpen(false);
-      setSelectedMember(null);
-      resetForm();
-    } catch (e) {
-      setErrorMsg(e instanceof Error ? e.message : "회원 수정에 실패했습니다.");
-    }
-  };
-
   const handleDelete = async (id: number) => {
     try {
       await memberApi.delete(id);
@@ -137,21 +112,7 @@ export default function MembersPage() {
     }
   };
 
-  const openEditDialog = (member: Member) => {
-    setSelectedMember(member);
-    setFormData({
-      name: member.name,
-      email: member.email || "",
-      password: "",
-      zip: member.zip || "",
-      addr1: member.addr1 || "",
-      addr2: member.addr2 || "",
-    });
-    setErrorMsg("");
-    setIsEditOpen(true);
-  };
-
-  // New function to open member detail dialog and fetch orders
+  // Open member detail dialog and fetch orders
   const openMemberDetailDialog = async (member: Member) => {
     setSelectedMemberForDetail(member);
     setIsDetailOpen(true);
@@ -170,7 +131,7 @@ export default function MembersPage() {
 
   return (
     <DashboardLayout>
-      <PageHeader title="회원 관리" description="회원 정보를 조회하고 관리합니다">
+      <PageHeader title="회원 목록" description="회원 정보를 조회합니다">
         <Dialog open={isCreateOpen} onOpenChange={(open) => { setIsCreateOpen(open); if (!open) resetForm(); }}>
           <DialogTrigger asChild>
             <Button onClick={resetForm}>
@@ -295,16 +256,9 @@ export default function MembersPage() {
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => openMemberDetailDialog(member)} // New: View Details button
+                          onClick={() => openMemberDetailDialog(member)}
                         >
                           <Eye className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => openEditDialog(member)}
-                        >
-                          <Pencil className="h-4 w-4" />
                         </Button>
                         <AlertDialog>
                           <AlertDialogTrigger asChild>
@@ -336,84 +290,6 @@ export default function MembersPage() {
           )}
         </CardContent>
       </Card>
-
-      <Dialog open={isEditOpen} onOpenChange={(open) => { setIsEditOpen(open); if (!open) resetForm(); }}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>회원 정보 수정</DialogTitle>
-            <DialogDescription>회원 정보를 수정하세요. 비밀번호는 변경 시에만 입력하세요.</DialogDescription>
-          </DialogHeader>
-          {errorMsg && (
-            <div className="rounded-lg bg-red-50 p-3 text-sm text-red-600 border border-red-200">
-              {errorMsg}
-            </div>
-          )}
-          <div className="grid gap-4 py-4">
-            <div className="grid gap-2">
-              <Label htmlFor="edit-name">이름</Label>
-              <Input
-                id="edit-name"
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                placeholder="회원 이름"
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="edit-email">이메일</Label>
-              <Input
-                id="edit-email"
-                type="email"
-                value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                placeholder="이메일"
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="edit-password">비밀번호 (변경 시 입력)</Label>
-              <Input
-                id="edit-password"
-                type="password"
-                value={formData.password}
-                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                placeholder="새 비밀번호"
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="edit-zip">우편번호</Label>
-              <Input
-                id="edit-zip"
-                value={formData.zip}
-                onChange={(e) => setFormData({ ...formData, zip: e.target.value })}
-                placeholder="우편번호"
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="edit-addr1">주소</Label>
-              <Input
-                id="edit-addr1"
-                value={formData.addr1}
-                onChange={(e) => setFormData({ ...formData, addr1: e.target.value })}
-                placeholder="기본 주소"
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="edit-addr2">상세 주소</Label>
-              <Input
-                id="edit-addr2"
-                value={formData.addr2}
-                onChange={(e) => setFormData({ ...formData, addr2: e.target.value })}
-                placeholder="상세 주소"
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsEditOpen(false)}>
-              취소
-            </Button>
-            <Button onClick={handleUpdate}>저장</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       {/* Member Detail Dialog */}
       <Dialog open={isDetailOpen} onOpenChange={setIsDetailOpen}>

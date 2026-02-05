@@ -1,5 +1,6 @@
 from sqlalchemy.orm import Session
 
+from crud.category import CategoryRepository
 from schemas.dto import ItemBaseModel
 from models.item.item import Item
 from models.item.book import Book
@@ -10,8 +11,28 @@ from models.category_item import CategoryItem
 from models.order import Order
 from models.order_item import OrderItem
 from models.member import Member
+cr= CategoryRepository()
 
 class ItemRepository:
+    def get_self_and_descendants(self,db:Session, category_id: int):
+        temp = [category_id]
+        category = cr.find_by_id(db, category_id)
+        if category.children is not None:
+            for child in category.children:
+                temp.extend(self.get_self_and_descendants(db,child.id))
+        return temp
+
+
+
+    def find_by_category(self, db:Session, category_id:int, item_type:str=None):
+        self_and_descendants_ids = self.get_self_and_descendants(db,category_id=category_id)
+        query=db.query(Item).join(CategoryItem).filter(
+            CategoryItem.category_id.in_(self_and_descendants_ids)
+        )
+        if item_type:
+            query = query.filter(Item.type == item_type)     #카테고리뿐만 아니라 아이템 타입또한 고려해서 거름ㅇㅇ
+        return query.all()
+
     def create(self, db:Session, item:Item):
         db.add(item)
         db.commit()

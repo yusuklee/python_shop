@@ -8,7 +8,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { memberApi, type MemberCreate } from "@/lib/api";
-import { UserPlus, Store } from "lucide-react";
+import { UserPlus } from "lucide-react";
+import Image from "next/image";
 
 export default function SignupPage() {
   const router = useRouter();
@@ -64,14 +65,20 @@ export default function SignupPage() {
       <div className="hidden lg:flex lg:w-1/2 gradient-sidebar items-center justify-center p-12">
         <div className="max-w-md text-center">
           <div className="flex justify-center mb-8">
-            <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-white/20 backdrop-blur-sm">
-              <Store className="h-10 w-10 text-white" />
+            <div className="flex h-24 w-24 items-center justify-center rounded-full overflow-hidden bg-white/20 backdrop-blur-sm">
+              <Image
+                src="/logo.webp"
+                alt="알빠노 SHOP"
+                width={96}
+                height={96}
+                className="object-cover"
+              />
             </div>
           </div>
-          <h1 className="text-4xl font-bold text-white mb-4">Shop Admin</h1>
+          <h1 className="text-4xl font-bold text-white mb-4">알빠노 SHOP</h1>
           <p className="text-lg text-white/80">
-            새로운 관리자 계정을 만들고
-            쇼핑몰 관리를 시작하세요.
+            새로운 계정을 만들고
+            쇼핑을 시작하세요.
           </p>
         </div>
       </div>
@@ -81,11 +88,17 @@ export default function SignupPage() {
         <Card className="w-full max-w-md shadow-xl border-0">
           <CardHeader className="text-center pb-2">
             <div className="flex justify-center mb-4 lg:hidden">
-              <div className="flex h-14 w-14 items-center justify-center rounded-xl gradient-sidebar">
-                <Store className="h-7 w-7 text-white" />
+              <div className="flex h-16 w-16 items-center justify-center rounded-full overflow-hidden">
+                <Image
+                  src="/logo.webp"
+                  alt="알빠노 SHOP"
+                  width={64}
+                  height={64}
+                  className="object-cover"
+                />
               </div>
             </div>
-            <CardTitle className="text-2xl font-bold">회원가입</CardTitle>
+            <CardTitle className="text-2xl font-bold">알빠노 SHOP</CardTitle>
             <CardDescription>새 계정을 만드세요</CardDescription>
           </CardHeader>
           <CardContent className="pt-4">

@@ -1,18 +1,15 @@
 from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
 from api.member_api import router as memberRouter
 from api.item_api import router as itemRouter
 from api.order_api import router as orderRouter
 from api.category_api import router as CategoryRouter
 from fastapi.middleware.cors import CORSMiddleware
-from db.init_db import init_db, add_email_column, create_default_admin
+
 
 app = FastAPI()
 
-@app.on_event("startup")
-def on_startup():
-    init_db()
-    add_email_column()
-    create_default_admin()
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
 app.include_router(memberRouter)
 app.include_router(itemRouter)

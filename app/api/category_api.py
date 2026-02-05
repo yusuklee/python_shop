@@ -19,15 +19,18 @@ strBody = Annotated[str | None, Body()]
 intBody = Annotated[int | None, Body()]
 
 
-def category_to_dict(category):
+def category_to_dict(category, include_children=False):
     if category is None:
         return None
-    return {
+    result = {
         "id": category.id,
         "name": category.name,
         "description": category.description,
         "parent_id": category.parent_id,
     }
+    if include_children and category.children:
+        result["children"] = [category_to_dict(child, include_children=True) for child in category.children]
+    return result
 
 
 @router.post("/create")
@@ -72,9 +75,39 @@ def update_category(ca_name: strBody, name: strBody, des: strBody, service: depe
     return category_to_dict(updated_category)
 
 
+@router.get("/show/all")
+def show_all_categories(service: depends):
+    categories = service.get_all_categories()
+    return [category_to_dict(cat, include_children=True) for cat in categories]
+
+
+@router.get("/show/all/flat")
+def show_all_categories_flat(service: depends):
+    categories = service.get_all_categories_flat()
+    return [category_to_dict(cat) for cat in categories]
+
+
+@router.get("/search")
+def search_categories(keyword: str, service: depends):
+    categories = service.search_categories(keyword)
+    return [category_to_dict(cat) for cat in categories]
+
+
+@router.get("/show/by-item/{item_id}")
+def show_categories_by_item(item_id: int, service: depends):
+    categories = service.get_categories_by_item(item_id)
+    return [category_to_dict(cat) for cat in categories]
+
+
 @router.get("/show/{id}")
 def show_category(id: int, service: depends):
     category = service.show_category(id=id)
     if category is None:
         raise HTTPException(status_code=404, detail="카테고리를 찾을 수 없습니다.")
     return category_to_dict(category)
+
+
+@router.patch("/disconnect")
+def disconnect_ca_it(item_id: intBody, ca_name: strBody, service: depends):
+    result = service.disconnect_category_item(item_id=item_id, ca_name=ca_name)
+    return result

@@ -8,7 +8,7 @@ class ItemBaseModel(BaseModel):
     name: str
     stock: int
     price: int
-    type: Optional[str] = None
+    image_url: Optional[str] = None
 
     class Config:
         from_attributes = True

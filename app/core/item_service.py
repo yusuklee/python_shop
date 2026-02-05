@@ -14,17 +14,17 @@ class ItemService:
         self.db = db
 
     def create_book(self,book:BookBaseModel):
-        new_book = Book(**book.model_dump(exclude={'id', 'type'}))
+        new_book = Book(**book.model_dump(exclude={'id'}))
         temp = ir.create(self.db, new_book)
         return temp
 
     def create_album(self, album:AlbumBaseModel):
-        album = Album(**album.model_dump(exclude={'id', 'type'}))
+        album = Album(**album.model_dump(exclude={'id'}))
         temp = ir.create(self.db,album)
         return temp
 
     def create_movie(self, movie:MovieBaseModel):
-        movie = Movie(**movie.model_dump(exclude={'id', 'type'}))
+        movie = Movie(**movie.model_dump(exclude={'id'}))
         temp = ir.create(self.db,movie)
         return temp
 
@@ -42,5 +42,8 @@ class ItemService:
     def delete_item(self, id:int):
         delete = ir.delete(self.db, id)
         return delete
+
+    def read_by_category(self, category_id: int, item_type: str = None):
+        return ir.find_by_category(self.db, category_id, item_type)
 
 

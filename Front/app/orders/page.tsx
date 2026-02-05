@@ -16,15 +16,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { itemApi, orderApi, type Item, type OrderItem, type OrderCreate, type UserInfo } from "@/lib/api";
-import { Plus, Trash2, ShoppingCart, User } from "lucide-react";
+import { itemApi, orderApi, type OrderItem, type OrderCreate, type UserInfo } from "@/lib/api";
+import { Trash2, ShoppingCart, User } from "lucide-react";
 
 const itemFetcher = () => itemApi.getAll();
 
@@ -36,8 +29,6 @@ export default function OrdersPage() {
   const [addr1, setAddr1] = useState("");
   const [addr2, setAddr2] = useState("");
   const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
-  const [selectedItemId, setSelectedItemId] = useState<string>("");
-  const [itemCount, setItemCount] = useState<number>(1);
 
   const [message, setMessage] = useState("");
   const [messageType, setMessageType] = useState<"success" | "error">("success");
@@ -54,6 +45,13 @@ export default function OrdersPage() {
       setAddr1(userInfo.addr1 || "");
       setAddr2(userInfo.addr2 || "");
     }
+
+    // 로컬 스토리지에서 장바구니 불러오기
+    const savedCart = localStorage.getItem("cart");
+    if (savedCart) {
+      const cartItems = JSON.parse(savedCart);
+      setOrderItems(cartItems);
+    }
   }, []);
 
   const showMessage = (msg: string, type: "success" | "error") => {
@@ -62,30 +60,10 @@ export default function OrdersPage() {
     setTimeout(() => setMessage(""), 3000);
   };
 
-  const handleAddItem = () => {
-    if (!selectedItemId || itemCount <= 0) return;
-
-    const existingIndex = orderItems.findIndex(
-      (item) => item.item_id === Number(selectedItemId)
-    );
-
-    if (existingIndex >= 0) {
-      const updated = [...orderItems];
-      updated[existingIndex].count += itemCount;
-      setOrderItems(updated);
-    } else {
-      setOrderItems([
-        ...orderItems,
-        { item_id: Number(selectedItemId), count: itemCount },
-      ]);
-    }
-
-    setSelectedItemId("");
-    setItemCount(1);
-  };
-
   const handleRemoveItem = (itemId: number) => {
-    setOrderItems(orderItems.filter((item) => item.item_id !== itemId));
+    const updated = orderItems.filter((item) => item.item_id !== itemId);
+    setOrderItems(updated);
+    localStorage.setItem("cart", JSON.stringify(updated));
   };
 
   const getItemName = (itemId: number) => {
@@ -125,8 +103,9 @@ export default function OrdersPage() {
       };
       await orderApi.create(currentUser.id, data);
       showMessage("주문이 성공적으로 생성되었습니다.", "success");
-      // Reset form - 배송지는 유지
+      // Reset form - 배송지는 유지, 장바구니 비우기
       setOrderItems([]);
+      localStorage.setItem("cart", "[]");
     } catch (e) {
       showMessage(e instanceof Error ? e.message : "주문 생성에 실패했습니다.", "error");
     } finally {
@@ -136,7 +115,7 @@ export default function OrdersPage() {
 
   return (
     <DashboardLayout>
-      <PageHeader title="주문 관리" description="새로운 주문을 생성합니다" />
+      <PageHeader title="장바구니" description="장바구니에 담긴 상품을 확인하고 주문합니다" />
 
       {message && (
         <div
@@ -217,44 +196,6 @@ export default function OrdersPage() {
             </CardContent>
           </Card>
 
-          {/* 상품 추가 */}
-          <Card>
-            <CardHeader>
-              <CardTitle>상품 추가</CardTitle>
-              <CardDescription>주문할 상품을 선택하고 수량을 입력하세요</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid gap-2">
-                <Label>상품</Label>
-                <Select value={selectedItemId} onValueChange={setSelectedItemId}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="상품을 선택하세요" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {items?.map((item, index) => (
-                      <SelectItem key={item.id ?? `item-${index}`} value={String(item.id)}>
-                        {item.name} - {item.price.toLocaleString()}원 (재고: {item.stock})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="item-count">수량</Label>
-                <Input
-                  id="item-count"
-                  type="number"
-                  min="1"
-                  value={itemCount}
-                  onChange={(e) => setItemCount(Number(e.target.value))}
-                />
-              </div>
-              <Button onClick={handleAddItem} className="w-full" disabled={!selectedItemId}>
-                <Plus className="mr-2 h-4 w-4" />
-                상품 추가
-              </Button>
-            </CardContent>
-          </Card>
         </div>
 
         {/* 주문 요약 */}
@@ -268,7 +209,7 @@ export default function OrdersPage() {
               <CardDescription>
                 {orderItems.length > 0
                   ? `${orderItems.length}개 상품이 담겨있습니다`
-                  : "주문할 상품을 추가하세요"}
+                  : "장바구니가 비어있습니다"}
               </CardDescription>
             </CardHeader>
             <CardContent>

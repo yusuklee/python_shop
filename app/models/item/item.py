@@ -10,6 +10,7 @@ class Item(Base):
     price = Column(Integer, default=0)
     stock = Column(Integer, default=0)
     type = Column(String(20))
+    image_url = Column(String(255),nullable=True)
 
     __mapper_args__ = {
         "polymorphic_on":type,      #type이라는 컬럼으로 자식을 구분할것이다

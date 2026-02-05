@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import useSWR from "swr";
 import { DashboardLayout } from "@/components/dashboard-layout";
@@ -39,12 +39,22 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { itemApi, type Item, type BookCreate, type AlbumCreate, type MovieCreate, type ItemUpdate } from "@/lib/api";
-import { Plus, Pencil, Trash2, Book as BookIcon, Disc, Film } from "lucide-react";
+import { itemApi, categoryApi, type Item, type BookCreate, type AlbumCreate, type MovieCreate, type ItemUpdate, type Category } from "@/lib/api";
+import { Plus, Pencil, Trash2, Book as BookIcon, Disc, Film, Upload, ImageIcon, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Tag, X } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 const fetcher = () => itemApi.getAll();
 
 type ItemType = "book" | "album" | "movie";
+type FilterType = "all" | "BOOK" | "ALBUM" | "MOVIE";
+
+const ITEMS_PER_PAGE = 20;
 
 export default function ItemsPage() {
   const router = useRouter();
@@ -53,7 +63,7 @@ export default function ItemsPage() {
   useEffect(() => {
     const userType = localStorage.getItem("user_type");
     if (userType === "member") {
-      router.replace("/orders");
+      router.replace("/shop");
     }
   }, [router]);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -61,6 +71,8 @@ export default function ItemsPage() {
   const [selectedItem, setSelectedItem] = useState<Item | null>(null);
   const [itemType, setItemType] = useState<ItemType>("book");
   const [errorMsg, setErrorMsg] = useState("");
+  const [filterType, setFilterType] = useState<FilterType>("all");
+  const [currentPage, setCurrentPage] = useState(1);
 
   // Form fields
   const [name, setName] = useState("");
@@ -72,6 +84,14 @@ export default function ItemsPage() {
   const [etc, setEtc] = useState("");
   const [director, setDirector] = useState("");
   const [actor, setActor] = useState("");
+  const [imageUrl, setImageUrl] = useState("");
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+
+  // Category states for edit dialog
+  const [allCategories, setAllCategories] = useState<Category[]>([]);
+  const [itemCategories, setItemCategories] = useState<Category[]>([]);
+  const [selectedCategoryToAdd, setSelectedCategoryToAdd] = useState<string>("");
 
   const resetForm = () => {
     setName("");
@@ -83,8 +103,23 @@ export default function ItemsPage() {
     setEtc("");
     setDirector("");
     setActor("");
+    setImageUrl("");
+    setImageFile(null);
     setItemType("book");
     setErrorMsg("");
+  };
+
+  const handleImageUpload = async (file: File) => {
+    setIsUploading(true);
+    try {
+      const result = await itemApi.uploadImage(file);
+      setImageUrl(result.url);
+      setImageFile(file);
+    } catch (e) {
+      setErrorMsg("이미지 업로드에 실패했습니다.");
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   const handleCreate = async () => {
@@ -99,21 +134,21 @@ export default function ItemsPage() {
           setErrorMsg("저자를 입력해주세요.");
           return;
         }
-        const data: BookCreate = { name, price, stock, author, isbn };
+        const data: BookCreate = { name, price, stock, author, isbn, image_url: imageUrl || undefined };
         await itemApi.createBook(data);
       } else if (itemType === "album") {
         if (!artist) {
           setErrorMsg("아티스트를 입력해주세요.");
           return;
         }
-        const data: AlbumCreate = { name, price, stock, artist, etc: etc || undefined };
+        const data: AlbumCreate = { name, price, stock, artist, etc: etc || undefined, image_url: imageUrl || undefined };
         await itemApi.createAlbum(data);
       } else {
         if (!director || !actor) {
           setErrorMsg("감독과 배우를 입력해주세요.");
           return;
         }
-        const data: MovieCreate = { name, price, stock, director, actor };
+        const data: MovieCreate = { name, price, stock, director, actor, image_url: imageUrl || undefined };
         await itemApi.createMovie(data);
       }
 
@@ -128,7 +163,7 @@ export default function ItemsPage() {
   const handleUpdate = async () => {
     if (!selectedItem?.id) return;
     try {
-      const data: ItemUpdate = { name, price, stock };
+      const data: ItemUpdate = { name, price, stock, image_url: imageUrl || undefined };
       await itemApi.update(selectedItem.id, data);
       mutate();
       setIsEditOpen(false);
@@ -148,14 +183,63 @@ export default function ItemsPage() {
     }
   };
 
-  const openEditDialog = (item: Item) => {
+  const openEditDialog = async (item: Item) => {
     setSelectedItem(item);
     setName(item.name);
     setPrice(item.price);
     setStock(item.stock);
+    setImageUrl(item.image_url || "");
     setErrorMsg("");
+    setSelectedCategoryToAdd("");
+
+    // Fetch all categories and item's categories
+    try {
+      const [allCats, itemCats] = await Promise.all([
+        categoryApi.getAllFlat(),
+        categoryApi.getByItemId(item.id)
+      ]);
+      setAllCategories(allCats);
+      setItemCategories(itemCats);
+    } catch (e) {
+      console.error("Failed to fetch categories:", e);
+      setAllCategories([]);
+      setItemCategories([]);
+    }
+
     setIsEditOpen(true);
   };
+
+  const handleAddCategory = async () => {
+    if (!selectedItem?.id || !selectedCategoryToAdd) return;
+
+    try {
+      await categoryApi.connectItem(selectedItem.id, selectedCategoryToAdd);
+      // Refresh item categories
+      const updatedCats = await categoryApi.getByItemId(selectedItem.id);
+      setItemCategories(updatedCats);
+      setSelectedCategoryToAdd("");
+    } catch (e) {
+      setErrorMsg(e instanceof Error ? e.message : "카테고리 연결에 실패했습니다.");
+    }
+  };
+
+  const handleRemoveCategory = async (categoryName: string) => {
+    if (!selectedItem?.id) return;
+
+    try {
+      await categoryApi.disconnectItem(selectedItem.id, categoryName);
+      // Refresh item categories
+      const updatedCats = await categoryApi.getByItemId(selectedItem.id);
+      setItemCategories(updatedCats);
+    } catch (e) {
+      setErrorMsg(e instanceof Error ? e.message : "카테고리 연결 해제에 실패했습니다.");
+    }
+  };
+
+  // Get available categories (not already connected to item)
+  const availableCategories = allCategories.filter(
+    (cat) => !itemCategories.some((ic) => ic.id === cat.id)
+  );
 
   const getItemTypeBadge = (type?: string) => {
     switch (type?.toUpperCase()) {
@@ -180,6 +264,38 @@ export default function ItemsPage() {
       default:
         return <Badge variant="outline">기타</Badge>;
     }
+  };
+
+  // 필터링된 상품
+  const filteredItems = useMemo(() => {
+    if (!items) return [];
+    if (filterType === "all") return items;
+    return items.filter((item) => item.type === filterType);
+  }, [items, filterType]);
+
+  // 페이지네이션 계산
+  const totalPages = Math.ceil(filteredItems.length / ITEMS_PER_PAGE);
+  const paginatedItems = useMemo(() => {
+    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+    return filteredItems.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+  }, [filteredItems, currentPage]);
+
+  // 필터 변경 시 페이지 리셋
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filterType]);
+
+  // 페이지 번호 배열 생성
+  const getPageNumbers = () => {
+    if (totalPages <= 10) {
+      return Array.from({ length: totalPages }, (_, i) => i + 1);
+    }
+    let startPage = Math.max(1, currentPage - 4);
+    let endPage = Math.min(totalPages, startPage + 9);
+    if (endPage - startPage < 9) {
+      startPage = Math.max(1, endPage - 9);
+    }
+    return Array.from({ length: endPage - startPage + 1 }, (_, i) => startPage + i);
   };
 
   return (
@@ -239,6 +355,43 @@ export default function ItemsPage() {
                     onChange={(e) => setStock(Number(e.target.value))}
                     placeholder="재고 수량"
                   />
+                </div>
+
+                <div className="grid gap-2">
+                  <Label>상품 이미지</Label>
+                  <div className="flex items-center gap-4">
+                    <label className="flex items-center gap-2 px-4 py-2 border rounded-md cursor-pointer hover:bg-gray-50">
+                      <Upload className="h-4 w-4" />
+                      <span>{isUploading ? "업로드 중..." : "이미지 선택"}</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        disabled={isUploading}
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) handleImageUpload(file);
+                        }}
+                      />
+                    </label>
+                    {imageUrl && (
+                      <div className="flex items-center gap-2">
+                        <img
+                          src={`http://localhost:8000${imageUrl}`}
+                          alt="미리보기"
+                          className="w-16 h-16 object-cover rounded border"
+                        />
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => { setImageUrl(""); setImageFile(null); }}
+                        >
+                          삭제
+                        </Button>
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 <TabsContent value="book" className="mt-0 grid gap-4">
@@ -324,19 +477,57 @@ export default function ItemsPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>상품 목록</CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle>상품 목록</CardTitle>
+            <div className="flex gap-2">
+              <Button
+                variant={filterType === "all" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setFilterType("all")}
+              >
+                전체
+              </Button>
+              <Button
+                variant={filterType === "BOOK" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setFilterType("BOOK")}
+              >
+                <BookIcon className="h-4 w-4 mr-1" />
+                도서
+              </Button>
+              <Button
+                variant={filterType === "ALBUM" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setFilterType("ALBUM")}
+              >
+                <Disc className="h-4 w-4 mr-1" />
+                앨범
+              </Button>
+              <Button
+                variant={filterType === "MOVIE" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setFilterType("MOVIE")}
+              >
+                <Film className="h-4 w-4 mr-1" />
+                영화
+              </Button>
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
           {isLoading && <p className="text-muted-foreground">로딩 중...</p>}
           {error && <p className="text-destructive">데이터를 불러오는데 실패했습니다. 백엔드 서버를 확인하세요.</p>}
-          {items && items.length === 0 && (
-            <p className="text-muted-foreground">등록된 상품이 없습니다.</p>
+          {filteredItems.length === 0 && !isLoading && (
+            <p className="text-muted-foreground">
+              {filterType === "all" ? "등록된 상품이 없습니다." : "해당 유형의 상품이 없습니다."}
+            </p>
           )}
-          {items && items.length > 0 && (
+          {paginatedItems.length > 0 && (
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>ID</TableHead>
+                  <TableHead>이미지</TableHead>
                   <TableHead>상품명</TableHead>
                   <TableHead>유형</TableHead>
                   <TableHead>가격</TableHead>
@@ -346,17 +537,44 @@ export default function ItemsPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {items.map((item, index) => (
+                {paginatedItems.map((item, index) => (
                   <TableRow key={item.id ?? `item-${index}`}>
                     <TableCell>{item.id}</TableCell>
+                    <TableCell>
+                      {item.image_url ? (
+                        <img
+                          src={`http://localhost:8000${item.image_url}`}
+                          alt={item.name}
+                          className="w-12 h-12 object-cover rounded"
+                        />
+                      ) : (
+                        <div className="w-12 h-12 bg-gray-100 rounded flex items-center justify-center">
+                          <ImageIcon className="h-6 w-6 text-gray-400" />
+                        </div>
+                      )}
+                    </TableCell>
                     <TableCell className="font-medium">{item.name}</TableCell>
                     <TableCell>{getItemTypeBadge(item.type)}</TableCell>
                     <TableCell>{item.price.toLocaleString()}원</TableCell>
                     <TableCell>{item.stock}</TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
-                      {item.type === "BOOK" && item.author && `저자: ${item.author}`}
-                      {item.type === "ALBUM" && item.artist && `아티스트: ${item.artist}`}
-                      {item.type === "MOVIE" && item.director && `감독: ${item.director}`}
+                    <TableCell className="text-sm text-muted-foreground max-w-[250px]">
+                      <div className="space-y-1">
+                        <div>
+                          {item.type === "BOOK" && item.author && `저자: ${item.author}`}
+                          {item.type === "ALBUM" && item.artist && `아티스트: ${item.artist}`}
+                          {item.type === "MOVIE" && item.director && `감독: ${item.director}`}
+                        </div>
+                        {item.categories && item.categories.length > 0 && (
+                          <div className="flex flex-wrap gap-1">
+                            <span className="text-xs">카테고리:</span>
+                            {item.categories.map((cat) => (
+                              <Badge key={cat.id} variant="outline" className="text-xs px-1 py-0">
+                                {cat.name}
+                              </Badge>
+                            ))}
+                          </div>
+                        )}
+                      </div>
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-2">
@@ -395,14 +613,67 @@ export default function ItemsPage() {
               </TableBody>
             </Table>
           )}
+
+          {/* 페이지네이션 */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-center gap-1 mt-6">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(1)}
+                disabled={currentPage === 1}
+                className="h-8 w-8 p-0"
+              >
+                <ChevronsLeft className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                disabled={currentPage === 1}
+                className="h-8 w-8 p-0"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              {getPageNumbers().map((page) => (
+                <Button
+                  key={page}
+                  variant={currentPage === page ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setCurrentPage(page)}
+                  className="h-8 w-8 p-0"
+                >
+                  {page}
+                </Button>
+              ))}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+                disabled={currentPage === totalPages}
+                className="h-8 w-8 p-0"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(totalPages)}
+                disabled={currentPage === totalPages}
+                className="h-8 w-8 p-0"
+              >
+                <ChevronsRight className="h-4 w-4" />
+              </Button>
+            </div>
+          )}
         </CardContent>
       </Card>
 
       <Dialog open={isEditOpen} onOpenChange={(open) => { setIsEditOpen(open); if (!open) resetForm(); }}>
-        <DialogContent>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>상품 정보 수정</DialogTitle>
-            <DialogDescription>상품의 기본 정보(이름, 가격, 재고)를 수정할 수 있습니다.</DialogDescription>
+            <DialogDescription>상품의 기본 정보와 카테고리를 수정할 수 있습니다.</DialogDescription>
           </DialogHeader>
           {errorMsg && (
             <div className="rounded-lg bg-red-50 p-3 text-sm text-red-600 border border-red-200">
@@ -439,6 +710,101 @@ export default function ItemsPage() {
                   onChange={(e) => setStock(Number(e.target.value))}
                   placeholder="재고 수량"
                 />
+              </div>
+            </div>
+            <div className="grid gap-2">
+              <Label>상품 이미지</Label>
+              <div className="flex items-center gap-4">
+                <label className="flex items-center gap-2 px-4 py-2 border rounded-md cursor-pointer hover:bg-gray-50">
+                  <Upload className="h-4 w-4" />
+                  <span>{isUploading ? "업로드 중..." : "이미지 변경"}</span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    disabled={isUploading}
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) handleImageUpload(file);
+                    }}
+                  />
+                </label>
+                {imageUrl && (
+                  <div className="flex items-center gap-2">
+                    <img
+                      src={`http://localhost:8000${imageUrl}`}
+                      alt="미리보기"
+                      className="w-16 h-16 object-cover rounded border"
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => { setImageUrl(""); setImageFile(null); }}
+                    >
+                      삭제
+                    </Button>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Category Management Section */}
+            <div className="grid gap-2 pt-4 border-t">
+              <Label className="flex items-center gap-2">
+                <Tag className="h-4 w-4" />
+                카테고리 관리
+              </Label>
+
+              {/* Current Categories */}
+              <div className="space-y-2">
+                <p className="text-sm text-muted-foreground">현재 연결된 카테고리:</p>
+                <div className="flex flex-wrap gap-2 min-h-[32px]">
+                  {itemCategories.length === 0 ? (
+                    <span className="text-sm text-muted-foreground">연결된 카테고리가 없습니다.</span>
+                  ) : (
+                    itemCategories.map((cat) => (
+                      <Badge key={cat.id} variant="secondary" className="flex items-center gap-1">
+                        {cat.name}
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveCategory(cat.name)}
+                          className="ml-1 hover:text-destructive"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </Badge>
+                    ))
+                  )}
+                </div>
+              </div>
+
+              {/* Add Category */}
+              <div className="flex gap-2 mt-2">
+                <Select value={selectedCategoryToAdd} onValueChange={setSelectedCategoryToAdd}>
+                  <SelectTrigger className="flex-1">
+                    <SelectValue placeholder="카테고리 선택" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableCategories.length === 0 ? (
+                      <SelectItem value="__none__" disabled>추가 가능한 카테고리가 없습니다</SelectItem>
+                    ) : (
+                      availableCategories.map((cat) => (
+                        <SelectItem key={cat.id} value={cat.name}>
+                          {cat.name}
+                        </SelectItem>
+                      ))
+                    )}
+                  </SelectContent>
+                </Select>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleAddCategory}
+                  disabled={!selectedCategoryToAdd || selectedCategoryToAdd === "__none__"}
+                >
+                  추가
+                </Button>
               </div>
             </div>
           </div>

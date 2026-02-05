@@ -18,6 +18,9 @@ class CategoryRepository:
     def find_all(self, db:Session):
         return db.query(Category).all()
 
+    def find_all_root(self, db:Session):       #최상위 애들만 가져오기
+        return db.query(Category).filter(Category.parent_id == None).all()
+
     def update(self, db:Session, ca_name:str,name:str, des:str):
         #update_content 는 name, password, zip, addr1, addr2 이렇게 구성
         updateCategory = self.find_by_name(db,ca_name)
@@ -36,5 +39,8 @@ class CategoryRepository:
         db.delete(db_category)
         db.commit()
         return True
+
+    def search_by_name(self, db: Session, keyword: str):
+        return db.query(Category).filter(Category.name.contains(keyword)).all()
 
 

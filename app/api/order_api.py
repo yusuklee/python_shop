@@ -1,3 +1,4 @@
+from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from core.order_service import OrderService
@@ -12,8 +13,11 @@ def get_order_service(db: Session = Depends(get_db)):
     return OrderService(db)
 
 
+order_service = Annotated[OrderService, Depends(get_order_service)]
+
+
 @router.post("/create/{member_id}")
-def create_order(dto:OrderBaseModel, member_id:int, service:OrderService=Depends(get_order_service)):
+def create_order(dto:OrderBaseModel, member_id:int, service:order_service):
     item_count_list = dto.items
     zip = dto.zip
     addr1 = dto.addr1
@@ -27,7 +31,7 @@ def create_order(dto:OrderBaseModel, member_id:int, service:OrderService=Depends
     )
 
 @router.get("/show/member/{member_id}")
-def get_orders_by_member_id(member_id: int, service: OrderService = Depends(get_order_service)):
+def get_orders_by_member_id(member_id: int, service: order_service):
     orders = service.get_orders_by_member_id(member_id)
     if not orders:
         return []
@@ -51,5 +55,10 @@ def get_orders_by_member_id(member_id: int, service: OrderService = Depends(get_
                 })
         result.append(order_dict)
     return result
+
+@router.delete("/delete/{order_id}")
+def delete_order(order_id:int, service:order_service):
+    res=service.cancel_order(order_id)
+    return res
 
 

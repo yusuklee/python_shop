@@ -13,7 +13,15 @@
       "Bash(powershell -Command \"Invoke-RestMethod -Uri ''http://localhost:8000/member/signup'' -Method Post -ContentType ''application/json'' -Body ''{\"\"name\"\":\"\"테스트\"\",\"\"email\"\":\"\"test@test.com\"\",\"\"password\"\":\"\"test123\"\",\"\"zip\"\":\"\"12345\"\",\"\"addr1\"\":\"\"서울시\"\",\"\"addr2\"\":\"\"강남구\"\"}''\")",
       "Bash(powershell:*)",
       "Bash(npm run dev)",
-      "Bash(taskkill:*)"
+      "Bash(taskkill:*)",
+      "Bash(mysql:*)",
+      "Bash(alembic downgrade:*)",
+      "Bash(cmd /c \"cd /d C:\\\\Users\\\\USER\\\\Desktop\\\\Python_Shop\\\\app && alembic downgrade base\")",
+      "Bash(cmd /c \"cd /d C:\\\\Users\\\\USER\\\\Desktop\\\\Python_Shop\\\\app && alembic upgrade head\")",
+      "Bash(cmd /c \"cd /d C:\\\\Users\\\\USER\\\\Desktop\\\\Python_Shop\\\\app && alembic current\")",
+      "Bash(cmd /c \"cd /d C:\\\\Users\\\\USER\\\\Desktop\\\\Python_Shop\\\\app && alembic upgrade head 2>&1\")",
+      "Bash(cmd /c \"mysql -u root -proot1234 -e \"\"SHOW TABLES FROM python_shop;\"\"\")",
+      "Bash(dir:*)"
     ]
   }
 }

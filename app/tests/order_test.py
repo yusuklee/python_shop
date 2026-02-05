@@ -45,6 +45,12 @@ def test_create_order_success(db_session):
 
 
 
+def test_del_order():
+
+    response = client.delete("/order/delete/30")
+    assert response.status_code==200
+    #직접 db가서 확인해보는게 편할듯 / 휴 정상동작하네..
+
 
 
 

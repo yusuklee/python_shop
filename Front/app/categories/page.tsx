@@ -1,12 +1,12 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import useSWR from "swr";
 import { DashboardLayout } from "@/components/dashboard-layout";
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -30,42 +30,35 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { categoryApi, itemApi, type Item } from "@/lib/api";
-import { Plus, Link as LinkIcon, Trash2, FolderTree, Search } from "lucide-react";
+import { categoryApi, type Category } from "@/lib/api";
+import { Plus, Trash2, FolderUp, FolderDown, Search, Folder } from "lucide-react";
 
-const itemFetcher = () => itemApi.getAll();
+const categoriesFetcher = () => categoryApi.getAllFlat();
 
 export default function CategoriesPage() {
   const router = useRouter();
-  const { data: items } = useSWR("items-for-category", itemFetcher);
+  const { data: categories, mutate } = useSWR("categories-flat", categoriesFetcher);
 
   useEffect(() => {
     const userType = localStorage.getItem("user_type");
     if (userType === "member") {
-      router.replace("/orders");
+      router.replace("/shop");
     }
   }, [router]);
-  const [isCreateOpen, setIsCreateOpen] = useState(false);
 
-  const [categoryName, setCategoryName] = useState("");
-  const [categoryDes, setCategoryDes] = useState("");
-  const [selectedItemId, setSelectedItemId] = useState<string>("");
-  const [connectCategoryName, setConnectCategoryName] = useState("");
+  const [searchKeyword, setSearchKeyword] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [isAddParentOpen, setIsAddParentOpen] = useState(false);
+  const [isAddChildOpen, setIsAddChildOpen] = useState(false);
+
+  // Create form
+  const [newCategoryName, setNewCategoryName] = useState("");
+  const [newCategoryDes, setNewCategoryDes] = useState("");
+
+  // Add parent/child form
   const [parentCategoryName, setParentCategoryName] = useState("");
   const [childCategoryName, setChildCategoryName] = useState("");
-  const [targetCategoryName, setTargetCategoryName] = useState("");
-  const [deleteCategoryName, setDeleteCategoryName] = useState("");
-
-  const [searchId, setSearchId] = useState("");
-  const [searchResult, setSearchResult] = useState<unknown>(null);
-  const [searchError, setSearchError] = useState("");
 
   const [message, setMessage] = useState("");
   const [messageType, setMessageType] = useState<"success" | "error">("success");
@@ -76,99 +69,95 @@ export default function CategoriesPage() {
     setTimeout(() => setMessage(""), 3000);
   };
 
+  // Filter categories by search keyword
+  const filteredCategories = useMemo(() => {
+    if (!categories) return [];
+    if (!searchKeyword.trim()) return categories;
+    return categories.filter((cat) =>
+      cat.name.toLowerCase().includes(searchKeyword.toLowerCase())
+    );
+  }, [categories, searchKeyword]);
+
   const handleCreateCategory = async () => {
-    if (!categoryName || !categoryDes) {
+    if (!newCategoryName || !newCategoryDes) {
       showMessage("카테고리명과 설명을 입력해주세요.", "error");
       return;
     }
     try {
-      await categoryApi.create(categoryName, categoryDes);
+      await categoryApi.create(newCategoryName, newCategoryDes);
       showMessage("카테고리가 생성되었습니다.", "success");
       setIsCreateOpen(false);
-      setCategoryName("");
-      setCategoryDes("");
+      setNewCategoryName("");
+      setNewCategoryDes("");
+      mutate();
     } catch (e) {
       showMessage(e instanceof Error ? e.message : "카테고리 생성에 실패했습니다.", "error");
     }
   };
 
-  const handleConnectItem = async () => {
-    if (!selectedItemId || !connectCategoryName) {
-      showMessage("상품과 카테고리명을 모두 선택해주세요.", "error");
-      return;
-    }
-    try {
-      await categoryApi.connectItem(Number(selectedItemId), connectCategoryName);
-      showMessage("상품이 카테고리에 연결되었습니다.", "success");
-      setSelectedItemId("");
-      setConnectCategoryName("");
-    } catch (e) {
-      showMessage(e instanceof Error ? e.message : "상품 연결에 실패했습니다.", "error");
-    }
-  };
-
-  const handleAddChild = async () => {
-    if (!targetCategoryName || !childCategoryName) {
-      showMessage("대상 카테고리명과 하위 카테고리명을 입력해주세요.", "error");
-      return;
-    }
-    try {
-      await categoryApi.addChild(targetCategoryName, childCategoryName);
-      showMessage("하위 카테고리가 추가되었습니다.", "success");
-      setTargetCategoryName("");
-      setChildCategoryName("");
-    } catch (e) {
-      showMessage(e instanceof Error ? e.message : "하위 카테고리 추가에 실패했습니다.", "error");
-    }
-  };
-
-  const handleAddParent = async () => {
-    if (!targetCategoryName || !parentCategoryName) {
-      showMessage("대상 카테고리명과 상위 카테고리명을 입력해주세요.", "error");
-      return;
-    }
-    try {
-      await categoryApi.addParent(targetCategoryName, parentCategoryName);
-      showMessage("상위 카테고리가 추가되었습니다.", "success");
-      setTargetCategoryName("");
-      setParentCategoryName("");
-    } catch (e) {
-      showMessage(e instanceof Error ? e.message : "상위 카테고리 추가에 실패했습니다.", "error");
-    }
-  };
-
   const handleDeleteCategory = async () => {
-    if (!deleteCategoryName) {
-      showMessage("삭제할 카테고리명을 입력해주세요.", "error");
-      return;
-    }
+    if (!selectedCategory) return;
     try {
-      await categoryApi.delete(deleteCategoryName);
+      await categoryApi.delete(selectedCategory.name);
       showMessage("카테고리가 삭제되었습니다.", "success");
-      setDeleteCategoryName("");
+      setSelectedCategory(null);
+      mutate();
     } catch (e) {
       showMessage(e instanceof Error ? e.message : "카테고리 삭제에 실패했습니다.", "error");
     }
   };
 
-  const handleSearch = async () => {
-    if (!searchId) {
-      setSearchError("카테고리 ID를 입력해주세요.");
+  const handleAddParent = async () => {
+    if (!selectedCategory || !parentCategoryName) {
+      showMessage("상위 카테고리명을 입력해주세요.", "error");
       return;
     }
     try {
-      setSearchError("");
-      const result = await categoryApi.getById(Number(searchId));
-      setSearchResult(result);
+      await categoryApi.addParent(selectedCategory.name, parentCategoryName);
+      showMessage("상위 카테고리가 추가되었습니다.", "success");
+      setIsAddParentOpen(false);
+      setParentCategoryName("");
+      mutate();
+      // Refresh selected category
+      const updated = await categoryApi.getById(selectedCategory.id);
+      setSelectedCategory(updated);
     } catch (e) {
-      setSearchError("카테고리를 찾을 수 없습니다.");
-      setSearchResult(null);
+      showMessage(e instanceof Error ? e.message : "상위 카테고리 추가에 실패했습니다.", "error");
     }
+  };
+
+  const handleAddChild = async () => {
+    if (!selectedCategory || !childCategoryName) {
+      showMessage("하위 카테고리명을 입력해주세요.", "error");
+      return;
+    }
+    try {
+      await categoryApi.addChild(selectedCategory.name, childCategoryName);
+      showMessage("하위 카테고리가 추가되었습니다.", "success");
+      setIsAddChildOpen(false);
+      setChildCategoryName("");
+      mutate();
+    } catch (e) {
+      showMessage(e instanceof Error ? e.message : "하위 카테고리 추가에 실패했습니다.", "error");
+    }
+  };
+
+  // Find parent category name
+  const getParentName = (parentId?: number) => {
+    if (!parentId || !categories) return null;
+    const parent = categories.find((cat) => cat.id === parentId);
+    return parent?.name || null;
+  };
+
+  // Find children
+  const getChildren = (categoryId: number) => {
+    if (!categories) return [];
+    return categories.filter((cat) => cat.parent_id === categoryId);
   };
 
   return (
     <DashboardLayout>
-      <PageHeader title="카테고리 관리" description="카테고리를 생성하고 상품을 연결합니다">
+      <PageHeader title="카테고리 관리" description="카테고리를 조회하고 관리합니다">
         <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
           <DialogTrigger asChild>
             <Button>
@@ -186,8 +175,8 @@ export default function CategoriesPage() {
                 <Label htmlFor="ca-name">카테고리명 *</Label>
                 <Input
                   id="ca-name"
-                  value={categoryName}
-                  onChange={(e) => setCategoryName(e.target.value)}
+                  value={newCategoryName}
+                  onChange={(e) => setNewCategoryName(e.target.value)}
                   placeholder="카테고리명"
                 />
               </div>
@@ -195,8 +184,8 @@ export default function CategoriesPage() {
                 <Label htmlFor="ca-des">설명 *</Label>
                 <Textarea
                   id="ca-des"
-                  value={categoryDes}
-                  onChange={(e) => setCategoryDes(e.target.value)}
+                  value={newCategoryDes}
+                  onChange={(e) => setNewCategoryDes(e.target.value)}
                   placeholder="카테고리 설명"
                 />
               </div>
@@ -223,185 +212,212 @@ export default function CategoriesPage() {
         </div>
       )}
 
-      <div className="grid gap-6 md:grid-cols-2">
-        {/* 카테고리 조회 */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Search className="h-5 w-5" />
-              카테고리 조회
-            </CardTitle>
-            <CardDescription>ID로 카테고리 정보를 조회합니다</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex gap-2">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Left side - Search and List */}
+        <div className="space-y-4">
+          {/* Search */}
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Search className="h-4 w-4" />
+                카테고리 이름 검색
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
               <Input
-                placeholder="카테고리 ID"
-                value={searchId}
-                onChange={(e) => setSearchId(e.target.value)}
-                type="number"
+                placeholder="카테고리 이름으로 검색..."
+                value={searchKeyword}
+                onChange={(e) => setSearchKeyword(e.target.value)}
               />
-              <Button onClick={handleSearch}>조회</Button>
-            </div>
-            {searchError && <p className="text-sm text-destructive">{searchError}</p>}
-            {searchResult && (
-              <div className="rounded-lg bg-muted p-4">
-                <pre className="text-sm overflow-auto">{JSON.stringify(searchResult, null, 2)}</pre>
+            </CardContent>
+          </Card>
+
+          {/* Category List */}
+          <Card className="min-h-[400px]">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base">
+                카테고리 목록
+                <span className="ml-2 text-sm font-normal text-muted-foreground">
+                  (클릭하여 선택)
+                </span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-1 max-h-[350px] overflow-y-auto">
+                {filteredCategories.length === 0 ? (
+                  <p className="text-sm text-muted-foreground py-4 text-center">
+                    {searchKeyword ? "검색 결과가 없습니다." : "카테고리가 없습니다."}
+                  </p>
+                ) : (
+                  filteredCategories.map((category) => (
+                    <div
+                      key={category.id}
+                      className={`flex items-center gap-2 p-3 rounded-lg cursor-pointer transition-colors ${
+                        selectedCategory?.id === category.id
+                          ? "bg-primary text-primary-foreground"
+                          : "hover:bg-muted"
+                      }`}
+                      onClick={() => setSelectedCategory(category)}
+                    >
+                      <Folder className="h-4 w-4 flex-shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium truncate">{category.name}</p>
+                        <p
+                          className={`text-xs truncate ${
+                            selectedCategory?.id === category.id
+                              ? "text-primary-foreground/70"
+                              : "text-muted-foreground"
+                          }`}
+                        >
+                          {category.description}
+                        </p>
+                      </div>
+                    </div>
+                  ))
+                )}
               </div>
-            )}
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        </div>
 
-        {/* 상품 연결 */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <LinkIcon className="h-5 w-5" />
-              상품-카테고리 연결
-            </CardTitle>
-            <CardDescription>상품을 카테고리에 연결합니다</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid gap-2">
-              <Label>상품 선택</Label>
-              <Select value={selectedItemId} onValueChange={setSelectedItemId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="상품을 선택하세요" />
-                </SelectTrigger>
-                <SelectContent>
-                  {items?.map((item, index) => (
-                    <SelectItem key={item.id ?? `item-${index}`} value={String(item.id)}>
-                      {item.name} (ID: {item.id})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="grid gap-2">
-              <Label>카테고리명</Label>
-              <Input
-                placeholder="연결할 카테고리명"
-                value={connectCategoryName}
-                onChange={(e) => setConnectCategoryName(e.target.value)}
-              />
-            </div>
-            <Button onClick={handleConnectItem} className="w-full">
-              연결
-            </Button>
-          </CardContent>
-        </Card>
+        {/* Right side - Selected Category Details */}
+        <div className="space-y-4">
+          <Card className="min-h-[400px]">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base">선택된 카테고리</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {selectedCategory ? (
+                <div className="space-y-4">
+                  <div className="p-4 bg-muted rounded-lg">
+                    <h3 className="font-semibold text-lg">{selectedCategory.name}</h3>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      {selectedCategory.description}
+                    </p>
+                    <div className="mt-3 text-sm space-y-1">
+                      <p>
+                        <span className="text-muted-foreground">ID:</span> {selectedCategory.id}
+                      </p>
+                      {selectedCategory.parent_id && (
+                        <p>
+                          <span className="text-muted-foreground">상위 카테고리:</span>{" "}
+                          {getParentName(selectedCategory.parent_id)}
+                        </p>
+                      )}
+                      {getChildren(selectedCategory.id).length > 0 && (
+                        <div>
+                          <span className="text-muted-foreground">하위 카테고리:</span>{" "}
+                          {getChildren(selectedCategory.id)
+                            .map((c) => c.name)
+                            .join(", ")}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex items-center justify-center h-[300px] text-muted-foreground">
+                  왼쪽에서 카테고리를 선택하세요
+                </div>
+              )}
+            </CardContent>
+          </Card>
 
-        {/* 하위 카테고리 추가 */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <FolderTree className="h-5 w-5" />
-              하위 카테고리 추가
-            </CardTitle>
-            <CardDescription>카테고리에 하위 카테고리를 추가합니다</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid gap-2">
-              <Label>대상 카테고리명 (부모)</Label>
-              <Input
-                placeholder="부모 카테고리명"
-                value={targetCategoryName}
-                onChange={(e) => setTargetCategoryName(e.target.value)}
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label>하위 카테고리명</Label>
-              <Input
-                placeholder="추가할 하위 카테고리명"
-                value={childCategoryName}
-                onChange={(e) => setChildCategoryName(e.target.value)}
-              />
-            </div>
-            <Button
-              onClick={handleAddChild}
-              className="w-full"
-              disabled={!targetCategoryName || !childCategoryName}
-            >
-              하위 카테고리 추가
-            </Button>
-          </CardContent>
-        </Card>
+          {/* Action Buttons */}
+          <div className="flex flex-col gap-2">
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button
+                  variant="destructive"
+                  className="w-full"
+                  disabled={!selectedCategory}
+                >
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  삭제
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>카테고리 삭제</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    정말로 &quot;{selectedCategory?.name}&quot; 카테고리를 삭제하시겠습니까? 이
+                    작업은 되돌릴 수 없습니다.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>취소</AlertDialogCancel>
+                  <AlertDialogAction onClick={handleDeleteCategory}>삭제</AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
 
-        {/* 상위 카테고리 추가 */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <FolderTree className="h-5 w-5" />
-              상위 카테고리 추가
-            </CardTitle>
-            <CardDescription>카테고리에 상위 카테고리를 추가합니다</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid gap-2">
-              <Label>대상 카테고리명 (자식)</Label>
-              <Input
-                placeholder="자식 카테고리명"
-                value={targetCategoryName}
-                onChange={(e) => setTargetCategoryName(e.target.value)}
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label>상위 카테고리명</Label>
-              <Input
-                placeholder="추가할 상위 카테고리명"
-                value={parentCategoryName}
-                onChange={(e) => setParentCategoryName(e.target.value)}
-              />
-            </div>
-            <Button
-              onClick={handleAddParent}
-              className="w-full"
-              disabled={!targetCategoryName || !parentCategoryName}
-            >
-              상위 카테고리 추가
-            </Button>
-          </CardContent>
-        </Card>
-
-        {/* 카테고리 삭제 */}
-        <Card className="md:col-span-2">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Trash2 className="h-5 w-5" />
-              카테고리 삭제
-            </CardTitle>
-            <CardDescription>카테고리를 삭제합니다</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="flex gap-2">
-              <Input
-                placeholder="삭제할 카테고리명"
-                value={deleteCategoryName}
-                onChange={(e) => setDeleteCategoryName(e.target.value)}
-              />
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <Button variant="destructive" disabled={!deleteCategoryName}>
-                    삭제
+            <Dialog open={isAddParentOpen} onOpenChange={setIsAddParentOpen}>
+              <DialogTrigger asChild>
+                <Button variant="outline" className="w-full" disabled={!selectedCategory}>
+                  <FolderUp className="mr-2 h-4 w-4" />
+                  부모 추가
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>상위 카테고리 추가</DialogTitle>
+                  <DialogDescription>
+                    &quot;{selectedCategory?.name}&quot;의 상위 카테고리를 설정합니다.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="grid gap-4 py-4">
+                  <div className="grid gap-2">
+                    <Label>상위 카테고리명</Label>
+                    <Input
+                      placeholder="상위 카테고리명 입력"
+                      value={parentCategoryName}
+                      onChange={(e) => setParentCategoryName(e.target.value)}
+                    />
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setIsAddParentOpen(false)}>
+                    취소
                   </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>카테고리 삭제</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      정말로 &quot;{deleteCategoryName}&quot; 카테고리를 삭제하시겠습니까? 이 작업은 되돌릴 수
-                      없습니다.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>취소</AlertDialogCancel>
-                    <AlertDialogAction onClick={handleDeleteCategory}>삭제</AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
-            </div>
-          </CardContent>
-        </Card>
+                  <Button onClick={handleAddParent}>추가</Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+
+            <Dialog open={isAddChildOpen} onOpenChange={setIsAddChildOpen}>
+              <DialogTrigger asChild>
+                <Button variant="outline" className="w-full" disabled={!selectedCategory}>
+                  <FolderDown className="mr-2 h-4 w-4" />
+                  자식 추가
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>하위 카테고리 추가</DialogTitle>
+                  <DialogDescription>
+                    &quot;{selectedCategory?.name}&quot;의 하위 카테고리를 설정합니다.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="grid gap-4 py-4">
+                  <div className="grid gap-2">
+                    <Label>하위 카테고리명</Label>
+                    <Input
+                      placeholder="하위 카테고리명 입력"
+                      value={childCategoryName}
+                      onChange={(e) => setChildCategoryName(e.target.value)}
+                    />
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setIsAddChildOpen(false)}>
+                    취소
+                  </Button>
+                  <Button onClick={handleAddChild}>추가</Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          </div>
+        </div>
       </div>
     </DashboardLayout>
   );

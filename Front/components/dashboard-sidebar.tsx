@@ -4,19 +4,22 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { Users, Package, FolderTree, ShoppingCart, LayoutDashboard, LogOut, Store } from "lucide-react";
+import { Users, Package, FolderTree, ShoppingCart, LayoutDashboard, LogOut, UserCircle } from "lucide-react";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import type { UserInfo } from "@/lib/api";
 
 const adminNavigation = [
   { name: "대시보드", href: "/", icon: LayoutDashboard },
-  { name: "회원 관리", href: "/members", icon: Users },
+  { name: "회원 목록", href: "/members", icon: Users },
   { name: "상품 관리", href: "/items", icon: Package },
   { name: "카테고리 관리", href: "/categories", icon: FolderTree },
 ];
 
 const memberNavigation = [
-  { name: "주문하기", href: "/orders", icon: ShoppingCart },
+  { name: "아이템 목록", href: "/shop", icon: Package },
+  { name: "장바구니", href: "/orders", icon: ShoppingCart },
+  { name: "마이페이지", href: "/mypage", icon: UserCircle },
 ];
 
 export function DashboardSidebar() {
@@ -47,13 +50,19 @@ export function DashboardSidebar() {
   return (
     <aside className="fixed left-0 top-0 z-40 h-screen w-64 gradient-sidebar flex flex-col shadow-xl">
       <Link
-        href={userType === "admin" ? "/" : "/orders"}
+        href={userType === "admin" ? "/" : "/shop"}
         className="flex h-16 items-center gap-3 border-b border-white/10 px-6 hover:bg-white/5 transition-colors cursor-pointer"
       >
-        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-white/20 backdrop-blur-sm">
-          <Store className="h-5 w-5 text-white" />
+        <div className="flex h-9 w-9 items-center justify-center rounded-full overflow-hidden bg-white/20">
+          <Image
+            src="/logo.webp"
+            alt="알빠노 SHOP"
+            width={36}
+            height={36}
+            className="object-cover"
+          />
         </div>
-        <h1 className="text-xl font-bold text-white">Shop Admin</h1>
+        <h1 className="text-xl font-bold text-white">알빠노 SHOP</h1>
       </Link>
       <nav className="flex flex-col gap-1 p-4 flex-1">
         {navigation.map((item) => {

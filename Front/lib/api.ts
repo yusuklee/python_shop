@@ -49,12 +49,19 @@ export interface MeResponse {
 }
 
 // Item (polymorphic: ITEM, BOOK, ALBUM, MOVIE)
+export interface ItemCategory {
+  id: number;
+  name: string;
+}
+
 export interface Item {
   id: number;
   name: string;
   price: number;
   stock: number;
   type: string;
+  image_url?: string;
+  categories?: ItemCategory[];
   // Book fields
   author?: string;
   isbn?: number;
@@ -72,6 +79,7 @@ export interface BookCreate {
   stock: number;
   author: string;
   isbn: number;
+  image_url?: string;
 }
 
 export interface AlbumCreate {
@@ -80,6 +88,7 @@ export interface AlbumCreate {
   stock: number;
   artist: string;
   etc?: string;
+  image_url?: string;
 }
 
 export interface MovieCreate {
@@ -88,12 +97,14 @@ export interface MovieCreate {
   stock: number;
   director: string;
   actor: string;
+  image_url?: string;
 }
 
 export interface ItemUpdate {
   name: string;
   price: number;
   stock: number;
+  image_url?: string;
 }
 
 // Category
@@ -215,6 +226,26 @@ export const itemApi = {
     return res.json();
   },
 
+  getByCategory: async (categoryId: number, itemType?: string): Promise<Item[]> => {
+    const url = itemType
+      ? `${API_BASE_URL}/item/show/by-category/${categoryId}?item_type=${itemType}`
+      : `${API_BASE_URL}/item/show/by-category/${categoryId}`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error("Failed to fetch items by category");
+    return res.json();
+  },
+
+  uploadImage: async (file: File): Promise<{ url: string }> => {
+    const formData = new FormData();
+    formData.append("file", file);
+    const res = await fetch(`${API_BASE_URL}/item/upload/image`, {
+      method: "POST",
+      body: formData,
+    });
+    if (!res.ok) throw new Error("Failed to upload image");
+    return res.json();
+  },
+
   getById: async (id: number): Promise<Item> => {
     const res = await fetch(`${API_BASE_URL}/item/show/${id}`);
     if (!res.ok) throw new Error("Item not found");
@@ -281,6 +312,30 @@ export const itemApi = {
 
 // Category API
 export const categoryApi = {
+  getAll: async (): Promise<Category[]> => {
+    const res = await fetch(`${API_BASE_URL}/category/show/all`);
+    if (!res.ok) throw new Error("Failed to fetch categories");
+    return res.json();
+  },
+
+  getAllFlat: async (): Promise<Category[]> => {
+    const res = await fetch(`${API_BASE_URL}/category/show/all/flat`);
+    if (!res.ok) throw new Error("Failed to fetch categories");
+    return res.json();
+  },
+
+  search: async (keyword: string): Promise<Category[]> => {
+    const res = await fetch(`${API_BASE_URL}/category/search?keyword=${encodeURIComponent(keyword)}`);
+    if (!res.ok) throw new Error("Failed to search categories");
+    return res.json();
+  },
+
+  getByItemId: async (itemId: number): Promise<Category[]> => {
+    const res = await fetch(`${API_BASE_URL}/category/show/by-item/${itemId}`);
+    if (!res.ok) throw new Error("Failed to fetch item categories");
+    return res.json();
+  },
+
   getById: async (id: number): Promise<Category> => {
     const res = await fetch(`${API_BASE_URL}/category/show/${id}`);
     if (!res.ok) throw new Error("Category not found");
@@ -347,6 +402,16 @@ export const categoryApi = {
     if (!res.ok) throw new Error("Failed to connect item");
     return res.json();
   },
+
+  disconnectItem: async (item_id: number, ca_name: string): Promise<boolean> => {
+    const res = await fetch(`${API_BASE_URL}/category/disconnect`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ item_id, ca_name }),
+    });
+    if (!res.ok) throw new Error("Failed to disconnect item");
+    return res.json();
+  },
 };
 
 // Order API
@@ -367,6 +432,17 @@ export const orderApi = {
   getByMemberId: async (memberId: number): Promise<Order[]> => {
     const res = await fetch(`${API_BASE_URL}/order/show/member/${memberId}`);
     if (!res.ok) throw new Error("Failed to fetch member orders");
+    return res.json();
+  },
+
+  cancel: async (orderId: number): Promise<boolean> => {
+    const res = await fetch(`${API_BASE_URL}/order/delete/${orderId}`, {
+      method: "DELETE",
+    });
+    if (!res.ok) {
+      const error = await res.json().catch(() => ({}));
+      throw new Error(error.detail || "주문 취소에 실패했습니다.");
+    }
     return res.json();
   },
 };
