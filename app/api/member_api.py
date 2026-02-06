@@ -1,3 +1,5 @@
+import os
+from dotenv import load_dotenv
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
@@ -12,6 +14,8 @@ from models.administrator import Administrator
 from schemas.dto import MemberBaseModel
 from datetime import datetime, timedelta, timezone
 
+load_dotenv()
+
 router = APIRouter(prefix="/member", tags=["Member"])
 security = HTTPBearer()
 
@@ -22,9 +26,7 @@ def get_password_hash(password: str) -> str:
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     return bcrypt.checkpw(plain_password.encode('utf-8'), hashed_password.encode('utf-8'))
 
-    SECRET_KEY = "SECRET_KEY"  # 노출되어선 안됩니다!! (환경변수로 관리)
-
-SECRET_KEY = "SECRET_KEY"
+SECRET_KEY = os.getenv("SECRET_KEY", "fallback-secret-key")
 ALGORITHM = "HS256"
 UTC = timezone.utc
 # https://suwani.tistory.com/188 블로그 참고
@@ -176,8 +178,7 @@ async def show_member(service: service_):
         result.append({
             "id": member.id,
             "name": member.name,
-            "password": member.password,
-            "email":member.email,
+            "email": member.email,
             "zip": member.zip,
             "addr1": member.addr1,
             "addr2": member.addr2,
@@ -192,7 +193,6 @@ async def show_member_by_id(id: int, service: service_):
         return {
             "id": find_by_id.id,
             "name": find_by_id.name,
-            "password": find_by_id.password,
             "email": find_by_id.email,
             "zip": find_by_id.zip,
             "addr1": find_by_id.addr1,
@@ -213,7 +213,6 @@ async def delete_member(id: int, service: service_):
         return {
             "id": member.id,
             "name": member.name,
-            "password": member.password,
             "email": member.email,
             "zip": member.zip,
             "addr1": member.addr1,
@@ -233,7 +232,6 @@ async def update_member(id: int, payload: dict, service: service_):
         return {
             "id": member.id,
             "name": member.name,
-            "password": member.password,
             "email": member.email,
             "zip": member.zip,
             "addr1": member.addr1,

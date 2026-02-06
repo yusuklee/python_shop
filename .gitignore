@@ -1,1 +1,4 @@
 nul
+.env
+__pycache__/
+*.pyc
