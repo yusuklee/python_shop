@@ -192,17 +192,16 @@ SQLALCHEMY_DATABASE_URL = "mysql+pymysql://root:root1234@localhost:3306/python_s
 
 ### 로그인 페이지
 <img width="2280" height="1258" alt="image" src="https://github.com/user-attachments/assets/650651af-a722-4fbb-8513-53477feeef9a" />
-<img width="2280" height="1258" alt="image" src="https://github.com/user-attachments/assets/650651af-a722-4fbb-8513-53477feeef9a" />
 
 
 ### 상품 관리
 <img width="2192" height="1069" alt="image" src="https://github.com/user-attachments/assets/42fbffc5-97b6-41d4-88ed-059bf317acf1" />
-<img width="2192" height="1069" alt="image" src="https://github.com/user-attachments/assets/42fbffc5-97b6-41d4-88ed-059bf317acf1" />
+
 
 
 ### 쇼핑 페이지
 <img width="2238" height="1115" alt="image" src="https://github.com/user-attachments/assets/a24d8aec-7a3e-4634-97cb-3527f83f8769" />
-<img width="2238" height="1115" alt="image" src="https://github.com/user-attachments/assets/a24d8aec-7a3e-4634-97cb-3527f83f8769" />
+
 
 
 ## 테스트 실행
