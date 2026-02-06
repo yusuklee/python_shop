@@ -3,13 +3,30 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import Script from "next/script";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { memberApi, type MemberCreate } from "@/lib/api";
-import { UserPlus } from "lucide-react";
+import { UserPlus, Search } from "lucide-react";
 import Image from "next/image";
+
+declare global {
+  interface Window {
+    daum: {
+      Postcode: new (options: {
+        oncomplete: (data: {
+          zonecode: string;
+          address: string;
+          addressType: string;
+          bname: string;
+          buildingName: string;
+        }) => void;
+      }) => { open: () => void };
+    };
+  }
+}
 
 export default function SignupPage() {
   const router = useRouter();
@@ -23,6 +40,18 @@ export default function SignupPage() {
   });
   const [errorMsg, setErrorMsg] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+
+  const handleAddressSearch = () => {
+    new window.daum.Postcode({
+      oncomplete: (data) => {
+        setFormData({
+          ...formData,
+          zip: data.zonecode,
+          addr1: data.address,
+        });
+      },
+    }).open();
+  };
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -60,7 +89,12 @@ export default function SignupPage() {
   };
 
   return (
-    <div className="min-h-screen flex pattern-bg">
+    <>
+      <Script
+        src="//t1.kakaocdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js"
+        strategy="lazyOnload"
+      />
+      <div className="min-h-screen flex pattern-bg">
       {/* Left Side - Branding */}
       <div className="hidden lg:flex lg:w-1/2 gradient-sidebar items-center justify-center p-12">
         <div className="max-w-md text-center">
@@ -144,35 +178,44 @@ export default function SignupPage() {
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="zip">우편번호</Label>
+                <div className="flex gap-2">
+                  <Input
+                    id="zip"
+                    value={formData.zip}
+                    placeholder="우편번호"
+                    readOnly
+                    className="flex-1 bg-muted"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleAddressSearch}
+                    disabled={isLoading}
+                  >
+                    <Search className="h-4 w-4 mr-1" />
+                    검색
+                  </Button>
+                </div>
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="addr1">주소</Label>
                 <Input
-                  id="zip"
-                  value={formData.zip}
-                  onChange={(e) => setFormData({ ...formData, zip: e.target.value })}
-                  placeholder="우편번호"
-                  disabled={isLoading}
+                  id="addr1"
+                  value={formData.addr1}
+                  placeholder="주소 검색을 클릭하세요"
+                  readOnly
+                  className="bg-muted"
                 />
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="grid gap-2">
-                  <Label htmlFor="addr1">주소</Label>
-                  <Input
-                    id="addr1"
-                    value={formData.addr1}
-                    onChange={(e) => setFormData({ ...formData, addr1: e.target.value })}
-                    placeholder="기본 주소"
-                    disabled={isLoading}
-                  />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="addr2">상세 주소</Label>
-                  <Input
-                    id="addr2"
-                    value={formData.addr2}
-                    onChange={(e) => setFormData({ ...formData, addr2: e.target.value })}
-                    placeholder="상세 주소"
-                    disabled={isLoading}
-                  />
-                </div>
+              <div className="grid gap-2">
+                <Label htmlFor="addr2">상세 주소</Label>
+                <Input
+                  id="addr2"
+                  value={formData.addr2}
+                  onChange={(e) => setFormData({ ...formData, addr2: e.target.value })}
+                  placeholder="상세 주소를 입력하세요"
+                  disabled={isLoading}
+                />
               </div>
               <Button type="submit" className="w-full h-11 mt-2" disabled={isLoading}>
                 <UserPlus className="mr-2 h-4 w-4" />
@@ -189,5 +232,6 @@ export default function SignupPage() {
         </Card>
       </div>
     </div>
+    </>
   );
 }

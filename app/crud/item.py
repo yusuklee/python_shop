@@ -52,6 +52,8 @@ class ItemRepository:
             updateItem.name = update_content.name
             updateItem.stock = update_content.stock
             updateItem.price = update_content.price
+            if update_content.image_url is not None:
+                updateItem.image_url = update_content.image_url
             db.commit()
             db.refresh(updateItem)
         return updateItem

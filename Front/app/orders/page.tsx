@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import useSWR from "swr";
+import Script from "next/script";
 import { DashboardLayout } from "@/components/dashboard-layout";
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
@@ -17,7 +18,23 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { itemApi, orderApi, type OrderItem, type OrderCreate, type UserInfo } from "@/lib/api";
-import { Trash2, ShoppingCart, User } from "lucide-react";
+import { Trash2, ShoppingCart, User, Search } from "lucide-react";
+
+declare global {
+  interface Window {
+    daum: {
+      Postcode: new (options: {
+        oncomplete: (data: {
+          zonecode: string;
+          address: string;
+          addressType: string;
+          bname: string;
+          buildingName: string;
+        }) => void;
+      }) => { open: () => void };
+    };
+  }
+}
 
 const itemFetcher = () => itemApi.getAll();
 
@@ -58,6 +75,15 @@ export default function OrdersPage() {
     setMessage(msg);
     setMessageType(type);
     setTimeout(() => setMessage(""), 3000);
+  };
+
+  const handleAddressSearch = () => {
+    new window.daum.Postcode({
+      oncomplete: (data) => {
+        setZip(data.zonecode);
+        setAddr1(data.address);
+      },
+    }).open();
   };
 
   const handleRemoveItem = (itemId: number) => {
@@ -114,7 +140,12 @@ export default function OrdersPage() {
   };
 
   return (
-    <DashboardLayout>
+    <>
+      <Script
+        src="//t1.kakaocdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js"
+        strategy="lazyOnload"
+      />
+      <DashboardLayout>
       <PageHeader title="장바구니" description="장바구니에 담긴 상품을 확인하고 주문합니다" />
 
       {message && (
@@ -168,20 +199,32 @@ export default function OrdersPage() {
             <CardContent className="space-y-4">
               <div className="grid gap-2">
                 <Label htmlFor="order-zip">우편번호 *</Label>
-                <Input
-                  id="order-zip"
-                  value={zip}
-                  onChange={(e) => setZip(e.target.value)}
-                  placeholder="우편번호"
-                />
+                <div className="flex gap-2">
+                  <Input
+                    id="order-zip"
+                    value={zip}
+                    placeholder="우편번호"
+                    readOnly
+                    className="flex-1 bg-muted"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleAddressSearch}
+                  >
+                    <Search className="h-4 w-4 mr-1" />
+                    검색
+                  </Button>
+                </div>
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="order-addr1">주소 *</Label>
                 <Input
                   id="order-addr1"
                   value={addr1}
-                  onChange={(e) => setAddr1(e.target.value)}
-                  placeholder="기본 주소"
+                  placeholder="주소 검색을 클릭하세요"
+                  readOnly
+                  className="bg-muted"
                 />
               </div>
               <div className="grid gap-2">
@@ -190,7 +233,7 @@ export default function OrdersPage() {
                   id="order-addr2"
                   value={addr2}
                   onChange={(e) => setAddr2(e.target.value)}
-                  placeholder="상세 주소"
+                  placeholder="상세 주소를 입력하세요"
                 />
               </div>
             </CardContent>
@@ -292,5 +335,6 @@ export default function OrdersPage() {
         </div>
       </div>
     </DashboardLayout>
+    </>
   );
 }
