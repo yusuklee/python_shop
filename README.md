@@ -142,7 +142,7 @@ npm run dev
 SQLALCHEMY_DATABASE_URL = "mysql+pymysql://root:root1234@localhost:3306/python_shop"
 ```
 
-필요에 따라 데이터베이스 연결 정보를 수정하세요.
+
 
 ## API 엔드포인트
 
@@ -191,13 +191,19 @@ SQLALCHEMY_DATABASE_URL = "mysql+pymysql://root:root1234@localhost:3306/python_s
 ## 스크린샷
 
 ### 로그인 페이지
-로그인 및 회원가입 기능을 제공합니다.
+<img width="2280" height="1258" alt="image" src="https://github.com/user-attachments/assets/650651af-a722-4fbb-8513-53477feeef9a" />
+<img width="2280" height="1258" alt="image" src="https://github.com/user-attachments/assets/650651af-a722-4fbb-8513-53477feeef9a" />
+
 
 ### 상품 관리
-도서, 앨범, 영화 상품을 등록하고 관리할 수 있습니다.
+<img width="2192" height="1069" alt="image" src="https://github.com/user-attachments/assets/42fbffc5-97b6-41d4-88ed-059bf317acf1" />
+<img width="2192" height="1069" alt="image" src="https://github.com/user-attachments/assets/42fbffc5-97b6-41d4-88ed-059bf317acf1" />
+
 
 ### 쇼핑 페이지
-카테고리별로 상품을 조회하고 장바구니에 담을 수 있습니다.
+<img width="2238" height="1115" alt="image" src="https://github.com/user-attachments/assets/a24d8aec-7a3e-4634-97cb-3527f83f8769" />
+<img width="2238" height="1115" alt="image" src="https://github.com/user-attachments/assets/a24d8aec-7a3e-4634-97cb-3527f83f8769" />
+
 
 ## 테스트 실행
 
